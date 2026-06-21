@@ -46,9 +46,14 @@
 - Branch principal: `main`.
 - Identidade local: `Wesley1302` com endereco GitHub noreply.
 - Commit: `checkpoint: v1 ready for deploy`.
-- Tag local: `v1-ready-for-deploy`.
-- Remote GitHub: nao configurado.
-- Push: nao executado; aguarda URL do repositorio GitHub privado.
+- Repositorio GitHub: `Wesley1302/bot-console-medieval`.
+- URL do remote: `https://github.com/Wesley1302/bot-console-medieval.git`.
+- Visibilidade: privado.
+- Remote: `origin` configurado e validado sem credenciais embutidas.
+- Branch enviada: `main`.
+- Tag enviada: `v1-ready-for-deploy`.
+- Data/hora do push: 2026-06-20 22:32:13 -03:00.
+- Status: push concluido.
 
 ## Confirmacoes
 
@@ -60,4 +65,4 @@
 
 ## Proximo Passo
 
-Configurar um repositorio GitHub privado, revisar a URL de `origin`, enviar `main` e a tag, e depois executar deploy controlado em Vercel e Oracle VPS.
+Executar o deploy controlado do backend na Oracle VPS. O deploy nao foi iniciado nesta etapa.
