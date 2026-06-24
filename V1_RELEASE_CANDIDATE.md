@@ -2,7 +2,7 @@
 
 ## Status Geral
 
-**Status: BACKEND EM PRODUCAO, FRONTEND PENDENTE.**
+**Status: DEPLOY FRONTEND BLOQUEADO.**
 
 Data da aprovacao local: 2026-06-20.
 
@@ -58,7 +58,7 @@ Data da aprovacao local: 2026-06-20.
 
 ## Proximo Passo
 
-Configurar HTTPS e CORS final, publicar o frontend na Vercel e executar smoke test ponta a ponta.
+Configurar HTTPS no backend Oracle, atualizar o rewrite e executar smoke test autenticado ponta a ponta.
 
 ## Checkpoint Git
 
@@ -67,4 +67,6 @@ Configurar HTTPS e CORS final, publicar o frontend na Vercel e executar smoke te
 - Tag publicada: `v1-ready-for-deploy`.
 - Repositorio privado: `Wesley1302/bot-console-medieval`.
 - Backend Oracle publicado e validado em 2026-06-23.
-- Frontend Vercel e HTTPS permanecem pendentes.
+- Frontend Vercel publicado em `https://bot-console-medieval.vercel.app`.
+- CORS final aplicado.
+- Login e producao autenticada permanecem bloqueados ate TLS no backend.

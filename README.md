@@ -2,6 +2,12 @@
 
 Painel web para controlar um bot Discord em um servidor especifico. A base atual entrega frontend React/Vite, backend Express, autenticacao por cookie HTTP-only, health check e status real do bot via Discord REST API.
 
+## Ambiente Publicado
+
+- Frontend: `https://bot-console-medieval.vercel.app`.
+- Backend: Oracle VPS, acessado pelo rewrite `/api` da Vercel.
+- Status: frontend e health publicados; login publico aguarda TLS no backend Oracle.
+
 ## Stack
 
 - Node.js

@@ -11,6 +11,7 @@ Publicar o frontend Vite na Vercel e encaminhar `/api/*` para o backend Oracle.
 ## Referencia
 
 - Commit inicial: `82f6698`.
+- Commit da configuracao Vercel: `2ed2e9d`.
 - Backend alvo: Oracle VPS `164.152.xxx.xxx`, porta `8787`.
 - Estrategia: rewrite Vercel `/api/:path*` para Oracle `/api/:path*`.
 - Client frontend: API relativa, `credentials: include`.
@@ -27,15 +28,43 @@ Publicar o frontend Vite na Vercel e encaminhar `/api/*` para o backend Oracle.
 
 ## Status Do Deploy
 
-Configuracao preparada; deploy pendente.
+Frontend publicado em producao na Vercel. Rewrite e health aprovados. Validacao autenticada bloqueada ate o backend ter TLS.
 
 ## URL Final
 
-Pendente.
+`https://bot-console-medieval.vercel.app`
 
 ## CORS
 
-Pendente de URL final da Vercel.
+`CORS_ORIGIN` atualizado na Oracle para `https://bot-console-medieval.vercel.app`. PM2 reiniciado e health local permaneceu `200`.
+
+## Testes Executados
+
+- Frontend publico `/`: `200`.
+- Titulo do aplicativo presente no HTML.
+- Dois assets JS/CSS: `200`, zero falhas.
+- Rewrite `/api/health`: `200`.
+- Rewrite `/api/status` sem sessao: `401`.
+- PM2: online apos restart, PID confirmado.
+- Health local Oracle: `200`.
+- CORS final: confirmado sem exibir o `.env`.
+
+## Testes Nao Executados
+
+- Login pela Vercel: nao executado para nao transmitir a senha pelo upstream HTTP.
+- Status, canais, mensagens, downloads e automacoes autenticados: dependem do login seguro.
+- Escrita `[PROD QA]`, exportacao e automacao: puladas para evitar credenciais em transporte sem TLS e spam.
+- Responsivo visual 390px, 430px, 768px e desktop: navegador automatizado indisponivel nesta sessao.
+
+## Bugs Encontrados E Corrigidos
+
+- A CLI adicionou `.vercel` duplicado ao `.gitignore`; duplicacao removida.
+- A primeira atualizacao remota de CORS falhou por interpretacao de aspas PowerShell/Bash; repetida com script temporario, validada e removida.
+- O primeiro deploy de um projeto novo foi publicado diretamente como producao pela Vercel; alias final confirmado.
+
+## Dados PROD QA
+
+Nenhuma mensagem, exportacao ou automacao de QA foi criada. Nao houve dados para limpar.
 
 ## Restricao De Seguranca
 
@@ -43,8 +72,13 @@ O trecho navegador-Vercel usa HTTPS, mas o rewrite ainda acessa a Oracle por HTT
 
 ## Proximos Passos
 
-1. Publicar a configuracao no GitHub.
-2. Criar e publicar o projeto Vercel.
-3. Registrar a URL final.
-4. Atualizar `CORS_ORIGIN` na Oracle.
-5. Validar health e frontend publico.
+1. Configurar dominio e TLS para o backend Oracle.
+2. Alterar o rewrite para o endpoint HTTPS.
+3. Revalidar login, cookie, status, canais e mensagens pela Vercel.
+4. Executar QA responsivo e escrita minima controlada.
+
+## Status Final
+
+**DEPLOY FRONTEND BLOQUEADO PARA USO AUTENTICADO.**
+
+O frontend esta publicado e o health funciona, mas producao nao pode ser marcada como validada enquanto credenciais atravessariam o trecho Vercel-Oracle por HTTP.

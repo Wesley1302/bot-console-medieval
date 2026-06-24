@@ -10,6 +10,11 @@
 
 O frontend usa caminhos relativos `/api`. O arquivo `vercel.json` encaminha essas chamadas para a API Oracle.
 
+- URL de producao: `https://bot-console-medieval.vercel.app`.
+- Rewrite: `/api/:path*` para a API Oracle na porta `8787`.
+- `CORS_ORIGIN`: aplicado com a URL final da Vercel.
+- `VITE_API_BASE_URL`: vazio/ausente.
+
 Enquanto o upstream estiver em HTTP, o rewrite serve apenas para validacao de frontend e health. Login e outras operacoes autenticadas exigem HTTPS de ponta a ponta antes da aprovacao final de producao.
 
 ## Oracle VPS

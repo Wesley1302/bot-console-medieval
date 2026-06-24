@@ -520,3 +520,34 @@ Status: **PRONTO PARA DEPLOY**, com smoke test obrigatorio depois da publicacao.
 ## Status
 
 **BACKEND EM PRODUCAO, FRONTEND PENDENTE.**
+
+---
+
+# Vercel Frontend Deploy / Prompt 12C
+
+## Data/Hora
+
+2026-06-23, America/Sao_Paulo.
+
+## Resultado
+
+- Projeto Vercel `bot-console-medieval` criado e vinculado.
+- Frontend publicado em `https://bot-console-medieval.vercel.app`.
+- Build Vite aprovado na Vercel.
+- Frontend e assets retornaram `200`.
+- Rewrite `/api/health` retornou `200`.
+- `/api/status` sem sessao retornou `401`.
+- `CORS_ORIGIN` atualizado na Oracle e PM2 reiniciado.
+- Nenhum segredo foi exibido ou versionado.
+
+## Testes Nao Executados
+
+- Login e fluxos autenticados via Vercel, pois o upstream Oracle ainda usa HTTP.
+- Escrita e limpeza `[PROD QA]`.
+- QA responsivo visual, porque o navegador automatizado nao estava disponivel.
+
+## Status
+
+**DEPLOY FRONTEND BLOQUEADO PARA USO AUTENTICADO.**
+
+O proximo gate e HTTPS no backend. Depois disso, login, status, canais, mensagens e responsividade devem ser revalidados antes de marcar producao final.

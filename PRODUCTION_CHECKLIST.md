@@ -19,19 +19,20 @@
 ## Seguranca Pendente
 
 - [ ] Configurar dominio ou proxy HTTPS para a API.
-- [ ] Trocar `CORS_ORIGIN` pela URL final da Vercel.
+- [x] Trocar `CORS_ORIGIN` pela URL final da Vercel.
 - [ ] Revalidar login pela URL HTTPS.
 - [ ] Restringir exposicao direta da porta `8787` depois do proxy HTTPS.
 - [ ] Revisar advisories npm sem executar correcao automatica.
 
 ## Frontend Vercel
 
-- [ ] Criar ou vincular projeto Vercel.
-- [ ] Configurar URL HTTPS da API.
-- [ ] Publicar frontend.
+- [x] Criar ou vincular projeto Vercel.
+- [x] Configurar rewrite relativo `/api`.
+- [x] Publicar frontend.
+- [x] Validar frontend, assets e health via Vercel.
 - [ ] Validar login, canais, mensagens, downloads e automacoes.
 - [ ] Validar mobile e desktop em producao.
 
 ## Status
 
-**BACKEND EM PRODUCAO, FRONTEND PENDENTE.**
+**DEPLOY FRONTEND BLOQUEADO PARA USO AUTENTICADO ATE TLS NO BACKEND.**
