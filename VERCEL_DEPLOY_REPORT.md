@@ -82,3 +82,11 @@ O trecho navegador-Vercel usa HTTPS, mas o rewrite ainda acessa a Oracle por HTT
 **DEPLOY FRONTEND BLOQUEADO PARA USO AUTENTICADO.**
 
 O frontend esta publicado e o health funciona, mas producao nao pode ser marcada como validada enquanto credenciais atravessariam o trecho Vercel-Oracle por HTTP.
+
+## Patch 12 - Preparacao Em 2026-06-24
+
+- Projeto Vercel alvo confirmado localmente: `bot-console-medieval`.
+- URL principal a preservar: `https://bot-console-medieval.vercel.app`.
+- Build e validacao local do patch aprovados.
+- Deploy do patch: pendente.
+- A restricao de seguranca do upstream HTTP permanece; nenhum login sera transmitido pela Vercel durante a validacao.

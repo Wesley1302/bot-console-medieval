@@ -1,6 +1,6 @@
-import { Bot, Download, Hash, LogOut, Shield } from 'lucide-react';
+import { Bot, Download, Hash, Shield } from 'lucide-react';
 
-export function MobileNav({ activeView = 'console', channelsOpen = false, compact = false, onChangeView, onLogout, onToggleChannels }) {
+export function MobileNav({ activeView = 'console', channelsOpen = false, compact = false, onChangeView, onToggleChannels }) {
   return (
     <nav className={compact ? 'mobile-nav is-slim' : 'mobile-nav'} aria-label="Navegacao movel">
       <button className={activeView === 'console' && !channelsOpen ? 'is-active' : ''} onClick={() => onChangeView?.('console')} type="button">
@@ -14,9 +14,6 @@ export function MobileNav({ activeView = 'console', channelsOpen = false, compac
       </button>
       <button className={activeView === 'automations' ? 'is-active' : ''} onClick={() => onChangeView?.('automations')} type="button">
         <Bot size={18} /><span>Auto</span>
-      </button>
-      <button onClick={onLogout} type="button">
-        <LogOut size={18} /><span>Sair</span>
       </button>
     </nav>
   );

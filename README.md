@@ -360,8 +360,11 @@ No frontend:
 2. No desktop, selecione o alvo na arvore lateral; no mobile, use o seletor.
 3. Informe o intervalo.
 4. Escreva mensagens separando blocos com uma linha contendo apenas `---`.
-5. Crie a automacao.
-6. Use os cards para pausar, retomar, cancelar ou remover.
+5. Use `Mencionar` para inserir usuarios, cargos, `@here` ou `@everyone` na posicao do cursor.
+6. Crie a automacao.
+7. Use os cards para pausar, retomar, cancelar ou remover.
+
+O seletor de mencoes funciona em sequencias e mensagens agendadas. O bot precisa das permissoes adequadas no Discord para que mencoes de cargos, `@here` ou `@everyone` gerem notificacoes.
 
 Limites da V1:
 
@@ -401,7 +404,7 @@ http://127.0.0.1:5173
 
 4. Digite a senha configurada em `ADMIN_PASSWORD`.
 
-5. Apos entrar, clique em `Sair` para encerrar a sessao.
+5. A sessao permanece em cookie HTTP-only. A rota `POST /api/auth/logout` continua disponivel, embora o painel nao exiba uma acao visual de logout nesta versao.
 
 ## Fora da V1 inicial
 

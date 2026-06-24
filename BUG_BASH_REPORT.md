@@ -129,3 +129,15 @@ Todos os bugs foram retestados por build, sintaxe, CDP, screenshots ou smoke HTT
 ## Checkpoint Seguro
 
 O Prompt 12A criou backup sanitizado, protegeu credenciais no `.gitignore`, moveu as chaves Oracle para fora do workspace e preparou o commit/tag locais. Detalhes em `CHECKPOINT_REPORT.md`.
+
+## Patch Pre-deploy De Automacoes E Header - 2026-06-24
+
+- Build Vite e checks ESM aprovados.
+- Canais abre como tela inicial, inclusive com drawer mobile ativo.
+- MentionPicker aprovado em Sequencia e Agendada, desktop e mobile.
+- Automacoes reais com mencao segura ao proprio bot chegaram a `done` e foram limpas.
+- Avatar e nome reais do bot aprovados; textos estaticos antigos removidos.
+- Acao visual Sair removida sem botao invisivel ou espaco residual.
+- Viewports 390px e 1440px sem overflow horizontal.
+- Zero erro de console, excecao JavaScript ou resposta HTTP inesperada no fluxo auditado.
+- Deteccao de mencoes recebidas pelo bot adiada por exigir Gateway/eventos.

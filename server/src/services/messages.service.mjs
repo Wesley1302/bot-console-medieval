@@ -245,7 +245,7 @@ function splitMessageContent(content) {
   return chunks;
 }
 
-export async function sendMessage({ channelId, content, files = [] }) {
+export async function sendMessage({ channelId, content, files = [], allowedMentions = null }) {
   const { text, uploads } = validateMessageInput({ channelId, content, files });
   await assertMessageableChannel(channelId);
 
@@ -258,11 +258,17 @@ export async function sendMessage({ channelId, content, files = [] }) {
     if (includeFiles.length === 0) {
       results.push(await discordRequest(`/channels/${channelId}/messages`, {
         method: 'POST',
-        body: { content: chunk },
+        body: {
+          content: chunk,
+          ...(allowedMentions ? { allowed_mentions: allowedMentions } : {}),
+        },
       }));
     } else {
       const form = new FormData();
-      form.set('payload_json', JSON.stringify({ content: chunk }));
+      form.set('payload_json', JSON.stringify({
+        content: chunk,
+        ...(allowedMentions ? { allowed_mentions: allowedMentions } : {}),
+      }));
       for (const [index, file] of includeFiles.entries()) {
         form.set(`files[${index}]`, new Blob([file.buffer], { type: file.mimetype || 'application/octet-stream' }), file.originalname);
       }

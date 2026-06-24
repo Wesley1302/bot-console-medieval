@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getChannels } from '../../api/channels.api.js';
 import { createAutomation } from '../../api/automations.api.js';
+import { insertAtCursor } from '../../utils/insertAtCursor.js';
+import { MentionPicker } from '../mentions/MentionPicker.jsx';
 import { Button } from '../ui/Button.jsx';
 import { Toast } from '../ui/Toast.jsx';
 
@@ -66,6 +68,8 @@ export function AutomationForm({ selectedChannel, onCreated }) {
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const textareaRef = useRef(null);
+  const selectionRef = useRef({ start: sampleText.length, end: sampleText.length });
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 901px)');
@@ -162,6 +166,28 @@ export function AutomationForm({ selectedChannel, onCreated }) {
     }
   }
 
+  function rememberSelection(event) {
+    selectionRef.current = {
+      start: event.currentTarget.selectionStart,
+      end: event.currentTarget.selectionEnd,
+    };
+  }
+
+  function insertMention(mention) {
+    const insertion = insertAtCursor(
+      body,
+      mention,
+      selectionRef.current.start,
+      selectionRef.current.end,
+    );
+    setBody(insertion.value);
+    selectionRef.current = { start: insertion.cursor, end: insertion.cursor };
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(insertion.cursor, insertion.cursor);
+    });
+  }
+
   return (
     <form className="automation-form" onSubmit={handleSubmit}>
       <div>
@@ -213,10 +239,24 @@ export function AutomationForm({ selectedChannel, onCreated }) {
         </label>
       )}
 
-      <label className="field">
-        <span>{mode === 'sequence' ? 'Mensagens, separe cada bloco com uma linha contendo apenas ---' : 'Mensagem agendada'}</span>
-        <textarea value={body} onChange={(event) => setBody(event.target.value)} rows={mode === 'sequence' ? 12 : 8} />
-      </label>
+      <div className="automation-editor">
+        <label className="field">
+          <span>{mode === 'sequence' ? 'Mensagens, separe cada bloco com uma linha contendo apenas ---' : 'Mensagem agendada'}</span>
+          <textarea
+            onChange={(event) => {
+              setBody(event.target.value);
+              rememberSelection(event);
+            }}
+            onClick={rememberSelection}
+            onKeyUp={rememberSelection}
+            onSelect={rememberSelection}
+            ref={textareaRef}
+            rows={mode === 'sequence' ? 12 : 8}
+            value={body}
+          />
+        </label>
+        <MentionPicker onSelect={insertMention} />
+      </div>
 
       <div className="automation-preview">
         <strong>{messageCountLabel(messages.length)}</strong>
@@ -224,7 +264,7 @@ export function AutomationForm({ selectedChannel, onCreated }) {
         <span>Tempo estimado: {mode === 'scheduled' ? (scheduledDate ? scheduledDate.toLocaleString('pt-BR') : 'data invalida') : formatDuration(estimatedSeconds)}</span>
         <span>Total de caracteres: {totalCharacters}</span>
         {mode === 'scheduled' && (
-          <span>Será enviada em: {scheduledDate ? scheduledDate.toLocaleString('pt-BR') : 'data invalida'}</span>
+          <span>Sera enviada em: {scheduledDate ? scheduledDate.toLocaleString('pt-BR') : 'data invalida'}</span>
         )}
       </div>
 

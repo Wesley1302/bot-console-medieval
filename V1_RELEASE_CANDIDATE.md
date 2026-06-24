@@ -2,7 +2,7 @@
 
 ## Status Geral
 
-**Status: DEPLOY FRONTEND BLOQUEADO.**
+**Status: PRONTO PARA DEPLOY COM PATCH APLICADO.**
 
 Data da aprovacao local: 2026-06-20.
 
@@ -43,7 +43,7 @@ Data da aprovacao local: 2026-06-20.
 - Viewports 390, 430, 768, 1024, 1440 e 1920.
 - Zero overflow horizontal.
 - Zero erro critico de console/rede apos correcoes.
-- Logout desktop e mobile.
+- Rota backend de logout preservada; acao visual removida por decisao de produto.
 - Varredura de segredos aprovada.
 
 ## Riscos Conhecidos
@@ -59,6 +59,15 @@ Data da aprovacao local: 2026-06-20.
 ## Proximo Passo
 
 Configurar HTTPS no backend Oracle, atualizar o rewrite e executar smoke test autenticado ponta a ponta.
+
+## Patch 12 - 2026-06-24
+
+- Canais definido como tela inicial.
+- Mencoes de usuarios, cargos, `@here` e `@everyone` adicionadas a automacoes sequenciais e agendadas.
+- Avatar e nome reais do bot aplicados na sidebar.
+- Acao visual Sair removida em desktop/mobile, sem remover o endpoint de logout.
+- Build, API, responsividade e duas automacoes reais de mencao aprovados.
+- Publicacao no mesmo projeto Vercel ainda pendente neste registro.
 
 ## Checkpoint Git
 

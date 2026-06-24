@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { getDiscordStatus } from '../../api/status.api.js';
 import { AutomationPanel } from '../automations/AutomationPanel.jsx';
 import { ChannelTree } from '../channels/ChannelTree.jsx';
 import { DownloadsPanel } from '../exports/DownloadsPanel.jsx';
@@ -8,14 +9,29 @@ import { Sidebar } from './Sidebar.jsx';
 import { TopBar } from './TopBar.jsx';
 import { MobileNav } from './MobileNav.jsx';
 
-export function AppShell({ children, onLogout, operator }) {
+export function AppShell({ children, operator }) {
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [activeThreads, setActiveThreads] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeView, setActiveView] = useState('console');
+  const [bot, setBot] = useState(null);
   const [exportJobId, setExportJobId] = useState('');
   const [downloadsRefreshKey, setDownloadsRefreshKey] = useState(0);
   const isChatView = activeView === 'console' && Boolean(selectedChannel?.messageable);
+
+  useEffect(() => {
+    let active = true;
+    getDiscordStatus()
+      .then((payload) => {
+        if (active) setBot(payload.bot || null);
+      })
+      .catch(() => {
+        if (active) setBot(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function selectChannel(channel) {
     setSelectedChannel(channel);
@@ -49,7 +65,7 @@ export function AppShell({ children, onLogout, operator }) {
 
   return (
     <div className="app-shell">
-      <Sidebar open={sidebarOpen}>
+      <Sidebar bot={bot} open={sidebarOpen}>
         <ChannelTree
           selectedChannel={selectedChannel}
           onExportStarted={handleExportStarted}
@@ -61,7 +77,6 @@ export function AppShell({ children, onLogout, operator }) {
         <TopBar
           activeView={activeView}
           onChangeView={handleChangeView}
-          onLogout={onLogout}
           operator={operator}
         />
         <main className={isChatView ? 'app-content app-content--chat' : 'app-content'}>
@@ -88,7 +103,6 @@ export function AppShell({ children, onLogout, operator }) {
           compact={sidebarOpen || isChatView}
           channelsOpen={sidebarOpen}
           onChangeView={handleChangeView}
-          onLogout={onLogout}
           onToggleChannels={handleOpenChannels}
         />
       </div>

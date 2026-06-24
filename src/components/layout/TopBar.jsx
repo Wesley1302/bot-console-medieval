@@ -1,4 +1,4 @@
-import { Bot, Download, LogOut, TerminalSquare } from 'lucide-react';
+import { Bot, Download, TerminalSquare } from 'lucide-react';
 import { Badge } from '../ui/Badge.jsx';
 import { Button } from '../ui/Button.jsx';
 
@@ -8,7 +8,7 @@ const navItems = [
   { id: 'automations', label: 'Automacoes', icon: Bot },
 ];
 
-export function TopBar({ activeView = 'console', onChangeView, onLogout, operator }) {
+export function TopBar({ activeView = 'console', onChangeView, operator }) {
   return (
     <header className="topbar">
       <div className="topbar__identity">
@@ -30,10 +30,6 @@ export function TopBar({ activeView = 'console', onChangeView, onLogout, operato
           );
         })}
         <Badge tone="gold">V1</Badge>
-        <Button className="button--ghost" onClick={onLogout}>
-          <LogOut size={16} />
-          Sair
-        </Button>
       </div>
     </header>
   );

@@ -265,6 +265,7 @@ export async function runAutomationTick(automationId) {
       channelId: automation.channelId,
       content: message.content,
       files: [],
+      allowedMentions: { parse: ['users', 'roles', 'everyone'] },
     });
     if (automation.status !== 'running') {
       await saveAutomation(automation);

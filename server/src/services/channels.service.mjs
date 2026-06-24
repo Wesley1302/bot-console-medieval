@@ -150,6 +150,7 @@ function normalizeMentionUser(member) {
   const id = user.id ? String(user.id) : '';
   const serverName = member?.nick || null;
   const displayName = serverName || user.global_name || user.username || 'Usuario';
+  const avatarExtension = String(user.avatar || '').startsWith('a_') ? 'gif' : 'png';
 
   return {
     id,
@@ -157,6 +158,11 @@ function normalizeMentionUser(member) {
     label: displayName,
     detail: user.username ? `@${user.username}` : 'usuario',
     value: `<@${id}>`,
+    username: user.username || null,
+    mention: `<@${id}>`,
+    avatarUrl: user.avatar
+      ? `https://cdn.discordapp.com/avatars/${id}/${user.avatar}.${avatarExtension}?size=64`
+      : null,
     searchable: normalizeText(`${displayName} ${serverName || ''} ${user.global_name || ''} ${user.username || ''}`),
   };
 }
@@ -169,6 +175,8 @@ function normalizeMentionRole(role) {
     label: role.name || 'Cargo',
     detail: 'cargo',
     value: `<@&${id}>`,
+    mention: `<@&${id}>`,
+    color: Number(role.color || 0),
     searchable: normalizeText(role.name),
   };
 }
@@ -186,6 +194,7 @@ export async function searchMentionTargets(query = '') {
     ? (Array.isArray(membersPayload.value) ? membersPayload.value : [])
       .map(normalizeMentionUser)
       .filter((item) => item.id && (!term || item.searchable.includes(term)))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'))
       .slice(0, 20)
     : [];
 
@@ -193,14 +202,26 @@ export async function searchMentionTargets(query = '') {
     ? (Array.isArray(rolesPayload.value) ? rolesPayload.value : [])
       .map(normalizeMentionRole)
       .filter((item) => item.id !== env.DISCORD_GUILD_ID && item.id && (!term || item.searchable.includes(term)))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'))
       .slice(0, 20)
     : [];
 
+  const special = [
+    { id: 'here', type: 'special', label: '@here', detail: 'pessoas online', value: '@here', mention: '@here' },
+    { id: 'everyone', type: 'special', label: '@everyone', detail: 'todos no servidor', value: '@everyone', mention: '@everyone' },
+  ].filter((item) => !term || normalizeText(`${item.label} ${item.detail}`).includes(term));
+
+  const cleanUsers = users.map(({ searchable, ...item }) => item);
+  const cleanRoles = roles.map(({ searchable, ...item }) => item);
+
   return {
     query: String(query || ''),
-    results: [...users, ...roles].map(({ searchable, ...item }) => item),
+    users: cleanUsers,
+    roles: cleanRoles,
+    special,
+    results: [...cleanUsers, ...cleanRoles],
     warnings: [
-      ...(membersPayload.status === 'rejected' ? ['Nao foi possivel buscar usuarios do servidor.'] : []),
+      ...(membersPayload.status === 'rejected' ? ['Nao foi possivel listar usuarios. Verifique permissoes/intents do bot.'] : []),
       ...(rolesPayload.status === 'rejected' ? ['Nao foi possivel buscar cargos do servidor.'] : []),
     ],
   };

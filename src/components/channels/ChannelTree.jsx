@@ -166,10 +166,6 @@ export function ChannelTree({ selectedChannel, onExportStarted, onSelectChannel,
 
   return (
     <div className="channel-tree">
-      <div className="channel-tree__server">
-        <strong>COROA DE VIDRO</strong>
-        <span>Comunidade</span>
-      </div>
       <ChannelSearch value={query} onChange={setQuery} />
 
       {status === 'loading' && <Loading label="Carregando canais" />}

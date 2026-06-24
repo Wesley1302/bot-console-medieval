@@ -133,6 +133,7 @@ export function getGuildInfo() {
 export async function getDiscordStatus() {
   assertDiscordConfig({ requireGuild: true });
   const [bot, guild] = await Promise.all([getBotUser(), getGuildInfo()]);
+  const avatarExtension = String(bot.avatar || '').startsWith('a_') ? 'gif' : 'png';
 
   return {
     ok: true,
@@ -142,6 +143,10 @@ export async function getDiscordStatus() {
       discriminator: bot.discriminator,
       globalName: bot.global_name || null,
       avatar: bot.avatar || null,
+      avatarUrl: bot.avatar
+        ? `https://cdn.discordapp.com/avatars/${bot.id}/${bot.avatar}.${avatarExtension}?size=128`
+        : null,
+      displayName: bot.global_name || bot.username,
     },
     guild: {
       id: guild.id,
