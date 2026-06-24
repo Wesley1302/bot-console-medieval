@@ -487,3 +487,36 @@ Status: **PRONTO PARA DEPLOY**, com smoke test obrigatorio depois da publicacao.
 - Commit local: `checkpoint: v1 ready for deploy`.
 - Tag local: `v1-ready-for-deploy`.
 - Push nao executado; remote GitHub privado ainda nao foi informado.
+
+---
+
+# Oracle Backend Deploy / Prompt 12B
+
+## Data/Hora
+
+2026-06-23, America/Sao_Paulo.
+
+## Resultado
+
+- Ubuntu 24.04 ARM64 atualizado e reiniciado.
+- Node.js 20, npm e PM2 instalados.
+- Release `20260621024512` publicada em `/opt/bot-console-medieval`.
+- Ambiente, logs, exports e automacoes configurados em armazenamento persistente.
+- `npm ci`, build e 22 checks ESM aprovados na VPS.
+- PM2 online e habilitado no boot.
+- Health local e publico: `200`.
+- `/api/status` publico sem sessao: `401`.
+- Login, cookie HTTP-only, bot/guild e canais validados internamente na VPS.
+- Firewall Oracle e local configurados para TCP `8787`.
+- Nenhum segredo registrado ou versionado.
+
+## Pendencias
+
+- Configurar HTTPS antes de usar login pela internet.
+- Atualizar `CORS_ORIGIN` com a URL final da Vercel.
+- Publicar e validar o frontend na Vercel.
+- Revisar advisories npm de ferramentas de desenvolvimento sem correcao automatica.
+
+## Status
+
+**BACKEND EM PRODUCAO, FRONTEND PENDENTE.**

@@ -2,7 +2,7 @@
 
 ## Status Geral
 
-**Status: PRONTO PARA DEPLOY.**
+**Status: BACKEND EM PRODUCAO, FRONTEND PENDENTE.**
 
 Data da aprovacao local: 2026-06-20.
 
@@ -53,15 +53,18 @@ Data da aprovacao local: 2026-06-20.
 - O alvo compacto mobile permanece com 36px de altura por decisao visual.
 - O modal de edicao nao foi reaberto visualmente no bug bash final, mas edicao real e componente foram aprovados anteriormente.
 - Existe uma chave SSH fora da pasta do projeto; ela nao deve entrar no pacote de deploy.
+- A API ainda precisa de HTTPS antes de receber credenciais pela internet.
+- `CORS_ORIGIN` ainda precisa apontar para a URL final da Vercel.
 
 ## Proximo Passo
 
-Preparar o deploy, configurar variaveis de producao, HTTPS e CORS, e executar smoke test pos-deploy.
+Configurar HTTPS e CORS final, publicar o frontend na Vercel e executar smoke test ponta a ponta.
 
 ## Checkpoint Git
 
 - Checkpoint local preparado em 2026-06-20.
 - Commit: `checkpoint: v1 ready for deploy`.
-- Tag local: `v1-ready-for-deploy`.
-- Status permanece `PRONTO PARA DEPLOY`, mas producao ainda nao foi validada.
-- Push aguarda URL confirmada de repositorio GitHub privado.
+- Tag publicada: `v1-ready-for-deploy`.
+- Repositorio privado: `Wesley1302/bot-console-medieval`.
+- Backend Oracle publicado e validado em 2026-06-23.
+- Frontend Vercel e HTTPS permanecem pendentes.
