@@ -88,5 +88,10 @@ O frontend esta publicado e o health funciona, mas producao nao pode ser marcada
 - Projeto Vercel alvo confirmado localmente: `bot-console-medieval`.
 - URL principal a preservar: `https://bot-console-medieval.vercel.app`.
 - Build e validacao local do patch aprovados.
-- Deploy do patch: pendente.
+- Deploy do patch: concluido no mesmo `projectId`.
+- Deployment: `https://bot-console-medieval-g7gt2e0fy-wesleys-projects-1e089870.vercel.app`.
+- Alias principal preservado: `https://bot-console-medieval.vercel.app`.
+- Root, JS, CSS e `/api/health`: 200.
+- `/api/status` sem sessao: 401.
+- Bundle publicado contem `Mencionar` e nao contem `COROA DE VIDRO`.
 - A restricao de seguranca do upstream HTTP permanece; nenhum login sera transmitido pela Vercel durante a validacao.

@@ -551,3 +551,15 @@ Status: **PRONTO PARA DEPLOY**, com smoke test obrigatorio depois da publicacao.
 **DEPLOY FRONTEND BLOQUEADO PARA USO AUTENTICADO.**
 
 O proximo gate e HTTPS no backend. Depois disso, login, status, canais, mensagens e responsividade devem ser revalidados antes de marcar producao final.
+## Patch 12 - Automacoes E Identidade Do Bot
+
+Rodada executada em 2026-06-24:
+
+- Canais definido como tela inicial.
+- Mencoes em automacoes sequenciais e agendadas aprovadas com Discord real.
+- `allowed_mentions` aplicado apenas ao fluxo automatizado.
+- Avatar/nome real do bot e remocao visual de Sair aprovados em desktop/mobile.
+- Build, sintaxe, API e CDP sem regressao critica.
+- Release Oracle `20260624003841` online.
+- Patch publicado no mesmo projeto Vercel e alias principal preservado.
+- Validacao autenticada via Vercel segue pendente por falta de TLS no upstream Oracle.

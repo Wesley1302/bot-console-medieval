@@ -65,11 +65,24 @@ Adiada: deteccao confiavel de mencoes ao bot requer Discord Gateway/eventos ou p
 - Usuarios podem nao ser listados se o bot nao tiver permissao/intent; cargos e especiais continuam disponiveis com warning amigavel.
 - O transporte Vercel -> Oracle continua HTTP publico; login pela URL Vercel nao deve ser validado antes de TLS no backend.
 - Deteccao de mencoes recebidas pelo bot permanece pendente por exigir arquitetura de eventos.
+- `npm ci` na VPS reportou tres advisories; nenhum `npm audit fix` foi executado, conforme a restricao do projeto.
 
 ## Deploy Vercel
 
-Pendente nesta etapa do relatorio. O alvo obrigatorio permanece o projeto existente `bot-console-medieval` e a URL `https://bot-console-medieval.vercel.app/`.
+- Commit funcional: `352305c`.
+- Backend atualizado na release Oracle `20260624003841`.
+- PM2: online.
+- Health Oracle local e publico: 200.
+- Login/status/mentions internos na Oracle: 200.
+- Projeto Vercel confirmado por `projectId` como `bot-console-medieval` antes do deploy.
+- Deploy de producao: `https://bot-console-medieval-g7gt2e0fy-wesleys-projects-1e089870.vercel.app`.
+- Alias principal preservado: `https://bot-console-medieval.vercel.app/`.
+- Pagina, JS, CSS e `/api/health`: 200.
+- `/api/status` sem sessao: 401, conforme esperado.
+- Login via Vercel nao executado: o rewrite ainda usa HTTP publico para a Oracle e nao e seguro transmitir a senha nesse trecho.
 
 ## Status Final
 
-**PATCH APROVADO LOCALMENTE, DEPLOY PENDENTE.**
+**PATCH APROVADO E PUBLICADO.**
+
+A publicacao tecnica do patch foi validada. A V1 continua aguardando TLS no backend para o teste autenticado ponta a ponta pela Vercel.

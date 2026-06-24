@@ -2,7 +2,7 @@
 
 ## Status Geral
 
-**Status: PRONTO PARA DEPLOY COM PATCH APLICADO.**
+**Status: PATCH PUBLICADO NA VERCEL, AGUARDANDO VALIDACAO FINAL.**
 
 Data da aprovacao local: 2026-06-20.
 
@@ -67,7 +67,9 @@ Configurar HTTPS no backend Oracle, atualizar o rewrite e executar smoke test au
 - Avatar e nome reais do bot aplicados na sidebar.
 - Acao visual Sair removida em desktop/mobile, sem remover o endpoint de logout.
 - Build, API, responsividade e duas automacoes reais de mencao aprovados.
-- Publicacao no mesmo projeto Vercel ainda pendente neste registro.
+- Backend atualizado na release Oracle `20260624003841` e PM2 online.
+- Patch publicado no mesmo projeto e alias `https://bot-console-medieval.vercel.app`.
+- Root, assets e `/api/health` aprovados; validacao autenticada pela Vercel continua pendente ate TLS no backend.
 
 ## Checkpoint Git
 

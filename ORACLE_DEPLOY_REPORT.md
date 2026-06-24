@@ -94,4 +94,15 @@ Publicar o backend do Bot Console Medieval em uma Oracle VPS, com release versio
 1. Configurar dominio ou proxy HTTPS para a API.
 2. Atualizar `CORS_ORIGIN` na VPS.
 3. Reiniciar o PM2 com `--update-env`.
+
+## Patch 12 - 2026-06-24
+
+- Commit aplicado: `352305c`.
+- Release: `/opt/bot-console-medieval/releases/20260624003841`.
+- Ambiente, CORS, firewall e dados compartilhados preservados.
+- `npm ci`, build Vite e checks ESM aprovados na VPS.
+- PM2 reiniciado e online.
+- Health local e publico: 200.
+- Login interno, status com avatar e endpoint de mencoes: 200.
+- Nenhum segredo foi impresso ou alterado.
 4. Publicar o frontend na Vercel e executar smoke test ponta a ponta.
