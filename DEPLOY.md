@@ -6,6 +6,12 @@
 - Frontend: Vercel, ainda pendente.
 - Codigo: repositorio GitHub privado.
 
+## Vercel
+
+O frontend usa caminhos relativos `/api`. O arquivo `vercel.json` encaminha essas chamadas para a API Oracle.
+
+Enquanto o upstream estiver em HTTP, o rewrite serve apenas para validacao de frontend e health. Login e outras operacoes autenticadas exigem HTTPS de ponta a ponta antes da aprovacao final de producao.
+
 ## Oracle VPS
 
 Diretorios usados:
