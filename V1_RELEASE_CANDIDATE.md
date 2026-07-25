@@ -2,7 +2,7 @@
 
 ## Status Geral
 
-**Status: PATCH PUBLICADO NA VERCEL, AGUARDANDO VALIDACAO FINAL.**
+**Status: PRODUCAO VALIDADA.**
 
 Data da aprovacao local: 2026-06-20.
 
@@ -53,12 +53,15 @@ Data da aprovacao local: 2026-06-20.
 - O alvo compacto mobile permanece com 36px de altura por decisao visual.
 - O modal de edicao nao foi reaberto visualmente no bug bash final, mas edicao real e componente foram aprovados anteriormente.
 - Existe uma chave SSH fora da pasta do projeto; ela nao deve entrar no pacote de deploy.
-- A API ainda precisa de HTTPS antes de receber credenciais pela internet.
-- `CORS_ORIGIN` ainda precisa apontar para a URL final da Vercel.
+- O certificado IP Let’s Encrypt e de curta duracao e depende da renovacao
+  automatica do Certbot.
+- Os advisories npm devem ser triados separadamente, sem `npm audit fix`
+  automatico.
 
 ## Proximo Passo
 
-Configurar HTTPS no backend Oracle, atualizar o rewrite e executar smoke test autenticado ponta a ponta.
+Monitorar certificado, PM2 e logs; executar o roadmap V2 apenas em mudancas
+incrementais.
 
 ## Patch 12 - 2026-06-24
 
@@ -80,4 +83,15 @@ Configurar HTTPS no backend Oracle, atualizar o rewrite e executar smoke test au
 - Backend Oracle publicado e validado em 2026-06-23.
 - Frontend Vercel publicado em `https://bot-console-medieval.vercel.app`.
 - CORS final aplicado.
-- Login e producao autenticada permanecem bloqueados ate TLS no backend.
+- Login e producao autenticada foram validados apos a ativacao do TLS.
+
+## Producao TLS - 25/07/2026
+
+- Refatoracao publicada no GitHub nos commits `3591d9d` e `d4d4731`.
+- Backend atualizado na release `/opt/bot-console-medieval/releases/20260725054058`.
+- Nginx e certificado Let’s Encrypt para o IP publico configurados.
+- Express restrito a `127.0.0.1:8787`; acesso publico direto bloqueado.
+- Rewrite da Vercel atualizado para upstream HTTPS.
+- Alias `https://bot-console-medieval.vercel.app` preservado.
+- Health, login, cookie seguro, sessao, status real e canais reais aprovados
+  ponta a ponta.

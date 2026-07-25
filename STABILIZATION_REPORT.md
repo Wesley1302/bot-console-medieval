@@ -563,3 +563,36 @@ Rodada executada em 2026-06-24:
 - Release Oracle `20260624003841` online.
 - Patch publicado no mesmo projeto Vercel e alias principal preservado.
 - Validacao autenticada via Vercel segue pendente por falta de TLS no upstream Oracle.
+
+---
+
+# Fechamento Da Borda E Deploy Da Refatoracao
+
+## Data/Hora
+
+25/07/2026, America/Sao_Paulo.
+
+## Resultado
+
+- Planos 001 a 009 concluidos.
+- Suite `npm run check` aprovada localmente, no CI e na Oracle.
+- Refatoracao enviada ao GitHub.
+- Release Oracle atualizada e PM2 online.
+- Nginx e certificado IP Let’s Encrypt configurados.
+- Renovacao automatica do certificado aprovada em dry-run.
+- Porta `8787` restrita a loopback.
+- Rewrite Vercel alterado para HTTPS.
+- Frontend publicado no mesmo projeto e alias.
+- Health, login, sessao, status real e canais reais aprovados pela Vercel.
+- CORS aceitou somente a origem configurada no teste de producao.
+- Nenhum segredo foi impresso ou versionado.
+
+## Testes Nao Repetidos
+
+- Escrita no Discord, upload, exportacoes e automacoes nao foram repetidos para
+  evitar spam; esses fluxos ja tinham evidencias reais aprovadas.
+- QA visual de producao nao foi repetido; seis viewports passaram na suite local.
+
+## Status
+
+**PRODUCAO VALIDADA. Prontidao estimada: 99%.**

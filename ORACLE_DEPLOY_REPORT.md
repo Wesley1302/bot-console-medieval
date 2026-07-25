@@ -106,3 +106,21 @@ Publicar o backend do Bot Console Medieval em uma Oracle VPS, com release versio
 - Login interno, status com avatar e endpoint de mencoes: 200.
 - Nenhum segredo foi impresso ou alterado.
 4. Publicar o frontend na Vercel e executar smoke test ponta a ponta.
+
+## Atualizacao TLS E Refatoracao - 25/07/2026
+
+- Commit de aplicacao: `3591d9d`.
+- Release: `/opt/bot-console-medieval/releases/20260725054058`.
+- `npm ci` e `npm run check`: aprovados na VPS.
+- PM2 `bot-console-medieval-backend`: online.
+- Nginx `1.24` instalado e validado.
+- Certbot `5.7` instalado via snap.
+- Certificado Let’s Encrypt emitido para o IP publico, sem dominio proprio.
+- Renovacao automatica e hook de reload do Nginx aprovados em dry-run.
+- Express restrito a `127.0.0.1:8787`.
+- Portas publicas da aplicacao: `80/443`; acesso direto a `8787` bloqueado.
+- Health HTTPS publico: `200`.
+- Login, status e canais aprovados pelo frontend Vercel.
+- npm reportou 10 advisories; nenhuma correcao automatica foi executada.
+
+**Status final: BACKEND ORACLE DEPLOYADO COM TLS.**

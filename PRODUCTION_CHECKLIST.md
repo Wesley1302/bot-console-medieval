@@ -13,15 +13,16 @@
 - [x] Health publico `200`.
 - [x] Rotas sem sessao protegidas com `401`.
 - [x] Login, status e canais validados internamente na VPS.
-- [x] Firewall Oracle e local configurados para `8787`.
+- [x] Firewall Oracle e local configurados para `22`, `80` e `443`.
 - [x] Rollback documentado.
 
-## Seguranca Pendente
+## Seguranca
 
-- [ ] Configurar dominio ou proxy HTTPS para a API.
+- [x] Configurar Nginx e certificado TLS valido para o IP da API.
 - [x] Trocar `CORS_ORIGIN` pela URL final da Vercel.
-- [ ] Revalidar login pela URL HTTPS.
-- [ ] Restringir exposicao direta da porta `8787` depois do proxy HTTPS.
+- [x] Revalidar login pela URL HTTPS.
+- [x] Restringir a porta `8787` a loopback.
+- [x] Validar renovacao automatica do certificado com dry-run.
 - [ ] Revisar advisories npm sem executar correcao automatica.
 
 ## Frontend Vercel
@@ -30,9 +31,11 @@
 - [x] Configurar rewrite relativo `/api`.
 - [x] Publicar frontend.
 - [x] Validar frontend, assets e health via Vercel.
-- [ ] Validar login, canais, mensagens, downloads e automacoes.
-- [ ] Validar mobile e desktop em producao.
+- [x] Validar login, status e canais pelo alias de producao.
+- [x] Validar root, JS, CSS e favicon em producao.
+- [ ] Repetir escrita, downloads e automacoes em producao (nao bloqueante; ja aprovados com Discord real antes do deploy).
+- [ ] Repetir QA visual mobile e desktop em producao (nao bloqueante; seis viewports aprovados localmente).
 
 ## Status
 
-**DEPLOY FRONTEND BLOQUEADO PARA USO AUTENTICADO ATE TLS NO BACKEND.**
+**PRODUCAO VALIDADA PARA OS FLUXOS PRINCIPAIS.**

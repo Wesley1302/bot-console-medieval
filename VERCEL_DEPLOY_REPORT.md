@@ -95,3 +95,20 @@ O frontend esta publicado e o health funciona, mas producao nao pode ser marcada
 - `/api/status` sem sessao: 401.
 - Bundle publicado contem `Mencionar` e nao contem `COROA DE VIDRO`.
 - A restricao de seguranca do upstream HTTP permanece; nenhum login sera transmitido pela Vercel durante a validacao.
+
+## Validacao Final TLS - 25/07/2026
+
+- Commit de configuracao: `d4d4731`.
+- Deployment: `dpl_BeVDch1GzEvoHo2N2F6RF3E9uvEY`.
+- Alias final: `https://bot-console-medieval.vercel.app`.
+- Rewrite atualizado para `https://164.152.50.184/api/:path*`.
+- Root, favicon, JavaScript, CSS e `/api/health`: `200`.
+- `/api/status` sem sessao: `401`.
+- Login: `200`.
+- Cookie: `HttpOnly`, `Secure` e `SameSite=Lax`.
+- `/api/auth/me`: autenticado.
+- `/api/status`: bot e guild reais presentes.
+- `/api/channels`: 21 categorias e 320 topicos ativos na rodada.
+- Origem Vercel permitida pelo CORS; origem hostil recusada.
+
+**Status final: PRODUCAO VALIDADA.**

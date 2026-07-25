@@ -15,6 +15,7 @@
 - **Risco**: MÉDIO
 - **Depende de**: `plans/001-criar-baseline-automatizada.md`
 - **Categoria**: segurança
+- **Status**: DONE em 25/07/2026
 - **Planejado em**: commit `06a1660`, 24/07/2026
 
 ## Por que isso importa
@@ -59,8 +60,9 @@ Antes da fase de produção, o operador deve fornecer:
 - confirmação para SSH/Oracle/Vercel;
 - caminho da chave SSH fora do repositório.
 
-Sem esses itens, concluir somente a configuração/testes locais e marcar o plano
-`BLOCKED: aguardando domínio e confirmação de produção`.
+Desde 2026, a Let’s Encrypt emite certificados IP de curta duracao. A execucao
+em producao usou o IP publico da Oracle como identificador, sem dominio proprio,
+apos confirmacao explicita do operador.
 
 ## Comandos necessários
 
@@ -215,15 +217,26 @@ Atualizar `DEPLOY.md` e checklist com:
 
 ## Critérios de conclusão
 
-- [ ] `npm run check` passa.
-- [ ] Rewrite Vercel usa HTTPS.
-- [ ] API HTTPS retorna 200.
-- [ ] 8787 não está pública.
-- [ ] Login/status/canais funcionam pela Vercel.
-- [ ] CORS wildcard é impossível em produção.
-- [ ] `trust proxy` representa a topologia validada.
-- [ ] Nenhum segredo entrou no Git ou relatório.
-- [ ] Plano 002 marcado `DONE`.
+- [x] `npm run check` passa.
+- [x] Rewrite Vercel usa HTTPS.
+- [x] API HTTPS retorna 200.
+- [x] 8787 não está pública.
+- [x] Login/status/canais funcionam pela Vercel.
+- [x] CORS wildcard é impossível em produção.
+- [x] `trust proxy` representa a topologia validada.
+- [x] Nenhum segredo entrou no Git ou relatório.
+- [x] Plano 002 marcado `DONE`.
+
+## Execucao Em Producao - 25/07/2026
+
+- Nginx termina TLS em `80/443` e encaminha `/api/` para loopback.
+- Certificado IP Let’s Encrypt emitido e renovacao automatica validada com
+  `certbot renew --dry-run`.
+- Express usa `API_HOST=127.0.0.1` e `TRUST_PROXY=loopback`.
+- Acesso publico direto a `8787` foi bloqueado.
+- Vercel usa upstream `https://164.152.50.184/api/:path*`.
+- Health, login, cookie `HttpOnly`/`Secure`/`SameSite=Lax`, sessao, status e
+  canais foram aprovados pelo alias de producao.
 
 ## Condições de parada
 

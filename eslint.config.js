@@ -9,6 +9,7 @@ export default [
     ignores: [
       'dist/**',
       'node_modules/**',
+      '.vercel/**',
       '.tmp/**',
       'logs/**',
       'server/exports/**',

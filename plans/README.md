@@ -13,7 +13,7 @@ de produção sem confirmação explícita do operador.
 | Plano | Título | Prioridade | Esforço | Depende de | Status |
 |---|---|---:|---:|---|---|
 | 001 | Criar baseline automatizada de segurança | P1 | M | — | DONE |
-| 002 | Fechar o transporte e a borda HTTP de produção | P0 | M | 001 | BLOCKED: aguarda dominio/API e confirmacao de producao |
+| 002 | Fechar o transporte e a borda HTTP de produção | P0 | M | 001 | DONE |
 | 003 | Tornar automações idempotentes e livres de corrida | P0 | M | 001 | DONE |
 | 004 | Estabilizar sessão, polling e ciclo de requests do frontend | P1 | M | 001 | DONE |
 | 005 | Unificar diretório do Discord e eliminar N+1 de perfis | P1 | M | 001 | DONE |

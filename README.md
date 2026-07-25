@@ -6,7 +6,7 @@ Painel web para controlar um bot Discord em um servidor especifico. A base atual
 
 - Frontend: `https://bot-console-medieval.vercel.app`.
 - Backend: Oracle VPS, acessado pelo rewrite `/api` da Vercel.
-- Status: frontend e health publicados; login publico aguarda TLS no backend Oracle.
+- Status: producao validada com TLS, login, status e canais reais.
 
 ## Stack
 
@@ -412,7 +412,7 @@ http://127.0.0.1:5173
 - PDF
 - Banco de dados externo
 - Multi-servidor
-- Deploy
+- Dominio proprio
 
 ## Frontend final medieval
 
