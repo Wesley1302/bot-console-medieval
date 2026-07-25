@@ -10,6 +10,19 @@ test('membros inline nao geram fetch individual', async () => {
   assert.equal(profiles.get('1').nick, 'Servidor 1');
 });
 
+test('aceita Set de IDs usado pelo carregamento de mensagens', async () => {
+  const directory = createGuildDirectory({
+    guildId: 'guild',
+    discordRequest: async (request) => ({ nick: `Membro ${request.split('/').at(-1)}` }),
+  });
+
+  const profiles = await directory.getMembers(new Set(['1', '2', '1']));
+
+  assert.equal(profiles.size, 2);
+  assert.equal(profiles.get('1').nick, 'Membro 1');
+  assert.equal(profiles.get('2').nick, 'Membro 2');
+});
+
 test('requests simultaneas do mesmo membro compartilham Promise', async () => {
   let calls = 0;
   let release;

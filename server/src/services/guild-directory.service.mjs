@@ -37,7 +37,7 @@ function createGuildDirectory({ discordRequest = productionDiscordRequest, guild
   async function getMembers(ids, inlineProfiles = new Map()) {
     const result = new Map();
     const missing = [];
-    for (const id of new Set((ids || []).map(String))) {
+    for (const id of new Set(Array.from(ids || [], String))) {
       if (inlineProfiles.has(id)) result.set(id, inlineProfiles.get(id));
       else missing.push(id);
     }
