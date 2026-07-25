@@ -42,14 +42,17 @@
 
 ## Limpeza E IA
 
-- [ ] Provisionar PostgreSQL com pgvector e backup.
-- [ ] Configurar variaveis de banco e IA sem expor segredos.
-- [ ] Executar `npm run db:migrate`.
-- [ ] Criar armazenamento persistente `shared/knowledge`.
-- [ ] Subir `bot-console-medieval-worker` no PM2.
-- [ ] Validar Gateway e reconciliacao.
+- [x] Provisionar PostgreSQL com pgvector.
+- [x] Configurar variaveis de banco sem expor segredos.
+- [x] Executar `npm run db:migrate`.
+- [x] Criar armazenamento persistente `shared/knowledge`.
+- [x] Subir `bot-console-medieval-worker` no PM2.
+- [x] Validar inicializacao do Gateway e reconciliacao.
+- [x] Publicar e validar as novas rotas e o frontend pelo alias Vercel.
+- [ ] Configurar backup automatizado e testar restauracao do PostgreSQL.
+- [ ] Configurar credencial e modelos do provedor de IA.
 - [ ] Validar consulta factual, semantica e narrativa com evidencias.
 - [ ] Validar limpeza em canal exclusivo de QA com confirmacao e rollback operacional.
 
-**As novas capacidades nao devem ser consideradas ativas em producao antes
-desta lista ser concluida.**
+**Infraestrutura, limpeza e jobs persistentes estao ativos. A IA generativa
+permanece desativada ate a configuracao e validacao do provedor.**

@@ -145,3 +145,26 @@ Use o script versionado:
 ```
 
 O primeiro comando lista releases. O segundo altera `current`, reinicia o PM2 e salva o estado.
+
+## Limpeza E IA Em Producao
+
+Estado em 25/07/2026:
+
+- release Oracle: `/opt/bot-console-medieval/releases/20260725203610`;
+- PostgreSQL 16.14 local na VPS;
+- pgvector 0.6.0;
+- duas migracoes aplicadas;
+- `server/knowledge` ligado a `/opt/bot-console-medieval/shared/knowledge`;
+- backend e worker `online` no PM2;
+- Gateway e reconciliacao ativos;
+- credencial de IA ainda nao configurada.
+
+Enquanto `AI_API_KEY`, `AI_MODEL` e `EMBEDDING_MODEL` estiverem vazios, limpeza,
+jobs persistentes, indice textual e consultas factuais continuam disponiveis,
+mas embeddings e respostas generativas nao devem ser considerados ativos.
+
+Pendencias operacionais:
+
+1. configurar backup automatizado e testar restauracao do PostgreSQL;
+2. configurar o provedor de IA sem registrar segredos;
+3. validar limpeza destrutiva apenas em canal exclusivo de QA.

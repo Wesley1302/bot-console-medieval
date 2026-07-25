@@ -2,9 +2,10 @@
 
 ## Estado
 
-Implementacao concluida em codigo e validada localmente sem executar operacoes
-destrutivas reais. A ativacao funcional depende de `DATABASE_URL`, provedor de
-IA e execucao do worker.
+Implementacao concluida, publicada e validada em producao sem executar
+operacoes destrutivas reais. PostgreSQL/pgvector, migracoes, armazenamento
+persistente, Gateway e worker estao ativos. Respostas generativas e embeddings
+continuam desativados ate a configuracao de uma credencial de provedor de IA.
 
 ## Entregue
 
@@ -32,15 +33,28 @@ IA e execucao do worker.
 
 ## Nao Executado
 
-- Migracao real: `DATABASE_URL` ausente no ambiente local.
 - Embeddings/modelo reais: configuracao de IA ausente.
 - Limpeza real no Discord: operacao destrutiva nao autorizada para esta rodada.
-- Deploy: nao solicitado para esta rodada.
+- Consulta factual, semantica ou narrativa com dados reais.
+- Backup automatizado do PostgreSQL.
+
+## Publicacao Em 25/07/2026
+
+- Commit funcional: `72c46e3`.
+- PostgreSQL 16.14 e pgvector 0.6.0 ativos somente na Oracle.
+- Migracoes `001_cleanup_ai.sql` e `002_sync_and_document_locks.sql` aplicadas.
+- Release Oracle: `/opt/bot-console-medieval/releases/20260725203610`.
+- PM2: backend e worker `online`.
+- Gateway e primeira reconciliacao iniciados sem erro.
+- Frontend atualizado no mesmo projeto e alias Vercel.
+- Health, login, sessao, status, canais, limpeza, IA e documentos validados
+  publicamente em modo de leitura.
 
 ## Riscos Remanescentes
 
 - Validar dimensao/compatibilidade do modelo de embedding escolhido.
 - Medir sincronizacao de categorias grandes em ambiente real.
-- Validar Gateway com intents e permissoes do bot.
 - Validar restart do worker com jobs reais no PostgreSQL.
-- Aplicar a migracao e o worker na Oracle somente em janela controlada.
+- Configurar e testar o provedor de IA antes de liberar respostas generativas.
+- Configurar backup e restauracao testada do PostgreSQL.
+- Validar limpeza somente em canal exclusivo de QA.
