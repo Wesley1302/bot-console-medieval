@@ -17,6 +17,8 @@ async function mockApi(page) {
     else if (url.pathname.includes('/messages')) body = { channelId: 'channel', messages: [], hasMore: false };
     else if (url.pathname.endsWith('/automations')) body = { automations: [] };
     else if (url.pathname.endsWith('/exports')) body = { exports: [] };
+    else if (url.pathname.endsWith('/ai/queries')) body = { queries: [] };
+    else if (url.pathname.endsWith('/knowledge/documents')) body = { documents: [] };
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
 }
@@ -30,5 +32,18 @@ test('console nao cria overflow horizontal nos viewports principais', async ({ p
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(1);
     await page.screenshot({ path: `test-results/viewport-${viewport.width}.png`, fullPage: true });
+  }
+});
+
+test('IA permanece utilizavel sem overflow em desktop e mobile', async ({ page }) => {
+  await mockApi(page);
+  for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1440, height: 1024 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+    await page.locator('button:visible').filter({ hasText: /^IA$/ }).click();
+    await expect(page.getByRole('heading', { name: 'Assistente de IA' })).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+    await page.screenshot({ path: `test-results/ai-${viewport.width}.png`, fullPage: true });
   }
 });

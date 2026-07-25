@@ -6,6 +6,9 @@ import { corsMiddleware } from './middleware/cors.mjs';
 import { errorHandler } from './middleware/errorHandler.mjs';
 import { authRouter } from './routes/auth.routes.mjs';
 import { automationsRouter } from './routes/automations.routes.mjs';
+import { cleanupRouter } from './routes/cleanup.routes.mjs';
+import { aiRouter } from './routes/ai.routes.mjs';
+import { knowledgeRouter } from './routes/knowledge.routes.mjs';
 import { channelsRouter } from './routes/channels.routes.mjs';
 import { exportsRouter } from './routes/exports.routes.mjs';
 import { healthRouter } from './routes/health.routes.mjs';
@@ -21,9 +24,12 @@ export function createApp() {
   app.use(healthRouter);
   app.use(authRouter);
   app.use(channelsRouter);
+  app.use(cleanupRouter);
   app.use(messagesRouter);
   app.use(exportsRouter);
   app.use(automationsRouter);
+  app.use(aiRouter);
+  app.use(knowledgeRouter);
 
   const distDir = path.join(process.cwd(), 'dist');
   if (fs.existsSync(distDir)) {

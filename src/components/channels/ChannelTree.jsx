@@ -3,16 +3,20 @@ import {
   ChevronDown,
   ChevronRight,
   Folder,
+  FolderOpen,
   Hash,
   Lock,
   Megaphone,
   MessageSquare,
+  Download,
+  Trash2,
 } from 'lucide-react';
 import { createExport } from '../../api/exports.api.js';
 import { EmptyState } from '../ui/EmptyState.jsx';
 import { Loading } from '../ui/Loading.jsx';
 import { Toast } from '../ui/Toast.jsx';
 import { ChannelSearch } from './ChannelSearch.jsx';
+import { CleanupModal } from '../cleanup/CleanupModal.jsx';
 
 function channelIcon(channel) {
   if (channel.type === 'forum') return MessageSquare;
@@ -32,12 +36,18 @@ function matchesQuery(category, channel, query) {
   return text.includes(query.toLowerCase());
 }
 
-function ContextMenu({ menu, onClose, onExport }) {
+function ContextMenu({ menu, onClose, onExport, onOpen, onCleanup }) {
   if (!menu) return null;
   return (
     <div className="context-menu" style={{ left: menu.x, top: menu.y }} role="menu">
+      <button type="button" onClick={() => { onOpen(menu.target); onClose(); }}>
+        <FolderOpen size={15} /> Abrir
+      </button>
       <button type="button" onClick={() => { onExport(menu.target); onClose(); }}>
-        Baixar mensagens
+        <Download size={15} /> Exportar
+      </button>
+      <button className="is-danger" type="button" onClick={() => { onCleanup(menu.target); onClose(); }}>
+        <Trash2 size={15} /> Limpar
       </button>
     </div>
   );
@@ -46,10 +56,13 @@ function ContextMenu({ menu, onClose, onExport }) {
 function ChannelButton({ channel, selected, onContext, onSelect }) {
   const Icon = channelIcon(channel);
   const timerRef = useRef(null);
+  const longPressedRef = useRef(false);
   const hasLock = !channel.messageable && !['forum', 'category'].includes(channel.type);
 
   function startLongPress(event) {
+    longPressedRef.current = false;
     timerRef.current = window.setTimeout(() => {
+      longPressedRef.current = true;
       onContext(channel, event.clientX || 24, event.clientY || 120);
     }, 520);
   }
@@ -61,7 +74,13 @@ function ChannelButton({ channel, selected, onContext, onSelect }) {
   return (
     <button
       className={selected?.id === channel.id ? 'channel-row is-selected' : 'channel-row'}
-      onClick={() => onSelect(channel)}
+      onClick={() => {
+        if (longPressedRef.current) {
+          longPressedRef.current = false;
+          return;
+        }
+        onSelect(channel);
+      }}
       onContextMenu={(event) => {
         event.preventDefault();
         onContext(channel, event.clientX, event.clientY);
@@ -85,7 +104,9 @@ export function ChannelTree({ selectedChannel, tree, status, error, onRefresh, o
   const [localError, setLocalError] = useState('');
   const [toast, setToast] = useState('');
   const [menu, setMenu] = useState(null);
+  const [cleanupTarget, setCleanupTarget] = useState(null);
   const categoryPressRef = useRef(null);
+  const categoryLongPressedRef = useRef(false);
 
   useEffect(() => {
     function closeMenu() {
@@ -120,11 +141,17 @@ export function ChannelTree({ selectedChannel, tree, status, error, onRefresh, o
 
   function openMenu(target, x, y) {
     if (!canExport(target)) return;
-    setMenu({ target, x, y });
+    setMenu({
+      target,
+      x: Math.max(8, Math.min(x, window.innerWidth - 194)),
+      y: Math.max(8, Math.min(y, window.innerHeight - 142)),
+    });
   }
 
   function startCategoryLongPress(category, event) {
+    categoryLongPressedRef.current = false;
     categoryPressRef.current = window.setTimeout(() => {
+      categoryLongPressedRef.current = true;
       openMenu(category, event.clientX || 24, event.clientY || 120);
     }, 520);
   }
@@ -140,6 +167,14 @@ export function ChannelTree({ selectedChannel, tree, status, error, onRefresh, o
       else next.add(category.id);
       return next;
     });
+  }
+
+  function openTarget(target) {
+    if (target.type === 'category') {
+      toggleCategory(target);
+      return;
+    }
+    onSelectChannel?.(target);
   }
 
   return (
@@ -161,7 +196,13 @@ export function ChannelTree({ selectedChannel, tree, status, error, onRefresh, o
             {!category.virtual && (
               <button
                 className="category-toggle"
-                onClick={() => toggleCategory(category)}
+                onClick={() => {
+                  if (categoryLongPressedRef.current) {
+                    categoryLongPressedRef.current = false;
+                    return;
+                  }
+                  toggleCategory(category);
+                }}
                 onContextMenu={(event) => {
                   event.preventDefault();
                   openMenu(category, event.clientX, event.clientY);
@@ -193,7 +234,14 @@ export function ChannelTree({ selectedChannel, tree, status, error, onRefresh, o
         );
       })}
 
-      <ContextMenu menu={menu} onClose={() => setMenu(null)} onExport={exportTarget} />
+      <ContextMenu
+        menu={menu}
+        onCleanup={setCleanupTarget}
+        onClose={() => setMenu(null)}
+        onExport={exportTarget}
+        onOpen={openTarget}
+      />
+      <CleanupModal target={cleanupTarget} onClose={() => setCleanupTarget(null)} />
     </div>
   );
 }

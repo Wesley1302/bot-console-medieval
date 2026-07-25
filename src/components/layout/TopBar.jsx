@@ -1,4 +1,4 @@
-import { Bot, Download, TerminalSquare } from 'lucide-react';
+import { Bot, Download, Sparkles, TerminalSquare } from 'lucide-react';
 import { Badge } from '../ui/Badge.jsx';
 import { Button } from '../ui/Button.jsx';
 
@@ -6,6 +6,7 @@ const navItems = [
   { id: 'console', label: 'Console', icon: TerminalSquare },
   { id: 'downloads', label: 'Downloads', icon: Download },
   { id: 'automations', label: 'Automacoes', icon: Bot },
+  { id: 'ai', label: 'IA', icon: Sparkles },
 ];
 
 export function TopBar({ activeView = 'console', onChangeView, operator }) {

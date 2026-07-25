@@ -32,3 +32,5 @@ server/exports/*
 
 server/automations/*
 !server/automations/.gitkeep
+server/knowledge/*
+!server/knowledge/.gitkeep

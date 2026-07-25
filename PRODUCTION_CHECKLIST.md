@@ -39,3 +39,17 @@
 ## Status
 
 **PRODUCAO VALIDADA PARA OS FLUXOS PRINCIPAIS.**
+
+## Limpeza E IA
+
+- [ ] Provisionar PostgreSQL com pgvector e backup.
+- [ ] Configurar variaveis de banco e IA sem expor segredos.
+- [ ] Executar `npm run db:migrate`.
+- [ ] Criar armazenamento persistente `shared/knowledge`.
+- [ ] Subir `bot-console-medieval-worker` no PM2.
+- [ ] Validar Gateway e reconciliacao.
+- [ ] Validar consulta factual, semantica e narrativa com evidencias.
+- [ ] Validar limpeza em canal exclusivo de QA com confirmacao e rollback operacional.
+
+**As novas capacidades nao devem ser consideradas ativas em producao antes
+desta lista ser concluida.**

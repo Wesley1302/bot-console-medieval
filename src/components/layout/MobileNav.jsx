@@ -1,4 +1,4 @@
-import { Bot, Download, Hash, Shield } from 'lucide-react';
+import { Bot, Download, Hash, Shield, Sparkles } from 'lucide-react';
 
 export function MobileNav({ activeView = 'console', channelsOpen = false, compact = false, onChangeView, onToggleChannels }) {
   return (
@@ -14,6 +14,9 @@ export function MobileNav({ activeView = 'console', channelsOpen = false, compac
       </button>
       <button className={activeView === 'automations' ? 'is-active' : ''} onClick={() => onChangeView?.('automations')} type="button">
         <Bot size={18} /><span>Auto</span>
+      </button>
+      <button className={activeView === 'ai' ? 'is-active' : ''} onClick={() => onChangeView?.('ai')} type="button">
+        <Sparkles size={18} /><span>IA</span>
       </button>
     </nav>
   );

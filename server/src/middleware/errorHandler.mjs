@@ -2,7 +2,10 @@ import { env } from '../config/env.mjs';
 
 export function errorHandler(error, _request, response, _next) {
   if (error.code === 'LIMIT_FILE_SIZE') {
-    response.status(400).json({ error: true, message: 'Arquivo excede o limite de 8 MB.' });
+    const message = error.field === 'file'
+      ? 'Documento excede o limite de 20 MB.'
+      : 'Arquivo excede o limite de 8 MB.';
+    response.status(400).json({ error: true, message });
     return;
   }
 

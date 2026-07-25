@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { env } from './server/src/config/env.mjs';
+import { env, getAdvancedConfigurationStatus } from './server/src/config/env.mjs';
 import { createApp } from './server/src/app.mjs';
 import { automationsService } from './server/src/services/automations.service.mjs';
 import { exportsService } from './server/src/services/exports.service.mjs';
@@ -20,4 +20,8 @@ try {
 const app = createApp();
 app.listen(env.API_PORT, env.API_HOST, () => {
   logger.info(`API listening on http://${env.API_HOST}:${env.API_PORT}`);
+  const advanced = getAdvancedConfigurationStatus();
+  if (!advanced.database || !advanced.ai) {
+    logger.warn('advanced_capabilities_not_configured', { missing: advanced.missing });
+  }
 });

@@ -9,6 +9,7 @@ import { Sidebar } from './Sidebar.jsx';
 import { TopBar } from './TopBar.jsx';
 import { MobileNav } from './MobileNav.jsx';
 import { useChannelTree } from '../../hooks/useChannelTree.js';
+import { AiPanel } from '../ai/AiPanel.jsx';
 
 export function AppShell({ children, operator }) {
   const [selectedChannel, setSelectedChannel] = useState(null);
@@ -86,6 +87,8 @@ export function AppShell({ children, operator }) {
             <DownloadsPanel refreshKey={downloadsRefreshKey} />
           ) : activeView === 'automations' ? (
             <AutomationPanel selectedChannel={selectedChannel} channelTree={tree} />
+          ) : activeView === 'ai' ? (
+            <AiPanel channelTree={tree} />
           ) : (
             <MessagePanel
               activeThreads={activeThreads}

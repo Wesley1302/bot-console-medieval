@@ -20,4 +20,12 @@ describe('MobileNav', () => {
     expect(onChangeView).toHaveBeenCalledWith('downloads');
     expect(onToggleChannels).toHaveBeenCalledTimes(1);
   });
+
+  it('abre a nova aba de IA', async () => {
+    const user = userEvent.setup();
+    const onChangeView = vi.fn();
+    render(<MobileNav onChangeView={onChangeView} onToggleChannels={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: /^IA$/i }));
+    expect(onChangeView).toHaveBeenCalledWith('ai');
+  });
 });

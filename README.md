@@ -20,6 +20,9 @@ Painel web para controlar um bot Discord em um servidor especifico. A base atual
 - Vite
 - lucide-react
 - CSS puro
+- PostgreSQL
+- pgvector
+- WebSocket do Discord no worker
 
 ## Instalar dependencias
 
@@ -130,6 +133,20 @@ Funcional:
 - `POST /api/automations`
 - `PATCH /api/automations/:automationId`
 - `DELETE /api/automations/:automationId`
+- `POST /api/cleanup/preview`
+- `POST /api/cleanup/jobs`
+- `GET /api/cleanup/jobs`
+- `GET /api/cleanup/jobs/:jobId`
+- `POST /api/cleanup/jobs/:jobId/cancel|pause|resume`
+- `POST /api/ai/queries`
+- `GET /api/ai/queries`
+- `GET /api/ai/queries/:queryId`
+- `POST /api/ai/queries/:queryId/cancel`
+- `POST /api/knowledge/documents`
+- `GET /api/knowledge/documents`
+- `GET /api/knowledge/documents/:id`
+- `POST /api/knowledge/documents/:id/reprocess`
+- `DELETE /api/knowledge/documents/:id`
 
 ## Autenticacao
 
@@ -157,6 +174,25 @@ Rotas protegidas:
 - `/api/messages`
 - `/api/exports`
 - `/api/automations`
+- `/api/cleanup`
+- `/api/ai`
+- `/api/knowledge`
+
+## Limpeza E Assistente De IA
+
+Essas capacidades usam PostgreSQL/pgvector e um worker separado. Consulte
+`docs/CLEANUP_AI.md` para configurar o banco, executar migracoes, iniciar o
+worker, operar a limpeza com confirmacao e usar consultas com evidencias.
+
+Comandos principais:
+
+```bash
+npm run db:migrate
+npm run worker
+```
+
+O Discord permanece como fonte oficial das mensagens. Criacoes e edicoes
+atualizam o indice; exclusoes removem fisicamente conteudo e embedding.
 
 Sem login, rotas protegidas retornam `401`. Com login, canais, foruns/topicos, leitura de mensagens, envio/edicao/exclusao, exportacoes e automacoes ja estao funcionais.
 

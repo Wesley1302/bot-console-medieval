@@ -31,6 +31,7 @@ Diretorios usados:
     logs/
     exports/
     automations/
+    knowledge/
 ```
 
 O pacote deve ser criado somente com arquivos versionados:
@@ -47,6 +48,18 @@ Depois de extrair uma nova release:
 4. Reiniciar `bot-console-medieval-backend` com `pm2 restart ... --update-env`.
 5. Executar `pm2 save`.
 
+Para limpeza e IA, provisionar PostgreSQL com pgvector antes da release:
+
+```bash
+npm run db:migrate
+pm2 start ecosystem.config.cjs
+pm2 save
+```
+
+O `ecosystem.config.cjs` executa API e worker. `server/knowledge` deve apontar
+para `/opt/bot-console-medieval/shared/knowledge`, assim como exports e
+automations usam armazenamento persistente.
+
 ## Variaveis De Producao
 
 O arquivo remoto fica em `/opt/bot-console-medieval/shared/.env`, modo `600`.
@@ -62,6 +75,15 @@ Variaveis obrigatorias:
 - `SESSION_SECRET`
 - `NODE_ENV=production`
 - `TRUST_PROXY=loopback`
+- `DATABASE_URL`
+- `DATABASE_SSL`
+- `AI_PROVIDER`
+- `AI_API_KEY`
+- `AI_BASE_URL`
+- `AI_MODEL`
+- `EMBEDDING_MODEL`
+- `KNOWLEDGE_STORAGE_PATH`
+- `DISCORD_GATEWAY_ENABLED`
 
 Nunca registrar valores reais em Git, logs ou documentacao.
 
@@ -70,7 +92,9 @@ Nunca registrar valores reais em Git, logs ou documentacao.
 ```bash
 pm2 status
 pm2 logs bot-console-medieval-backend --lines 50 --nostream
+pm2 logs bot-console-medieval-worker --lines 50 --nostream
 pm2 restart bot-console-medieval-backend --update-env
+pm2 restart bot-console-medieval-worker --update-env
 pm2 save
 ```
 
