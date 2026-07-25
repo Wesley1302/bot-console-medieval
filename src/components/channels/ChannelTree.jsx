@@ -8,7 +8,6 @@ import {
   Megaphone,
   MessageSquare,
 } from 'lucide-react';
-import { getChannels } from '../../api/channels.api.js';
 import { createExport } from '../../api/exports.api.js';
 import { EmptyState } from '../ui/EmptyState.jsx';
 import { Loading } from '../ui/Loading.jsx';
@@ -80,34 +79,13 @@ function ChannelButton({ channel, selected, onContext, onSelect }) {
   );
 }
 
-export function ChannelTree({ selectedChannel, onExportStarted, onSelectChannel, onTreeLoaded }) {
-  const [tree, setTree] = useState(null);
+export function ChannelTree({ selectedChannel, tree, status, error, onRefresh, onExportStarted, onSelectChannel }) {
   const [query, setQuery] = useState('');
   const [openCategories, setOpenCategories] = useState(() => new Set());
-  const [status, setStatus] = useState('loading');
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState('');
   const [toast, setToast] = useState('');
   const [menu, setMenu] = useState(null);
   const categoryPressRef = useRef(null);
-
-  useEffect(() => {
-    async function loadChannels() {
-      setStatus('loading');
-      setError('');
-      try {
-        const payload = await getChannels();
-        setTree(payload);
-        onTreeLoaded?.(payload);
-        setOpenCategories(new Set());
-        setStatus('ready');
-      } catch (requestError) {
-        setStatus('error');
-        setError(requestError.message);
-      }
-    }
-
-    loadChannels();
-  }, [onTreeLoaded]);
 
   useEffect(() => {
     function closeMenu() {
@@ -129,14 +107,14 @@ export function ChannelTree({ selectedChannel, onExportStarted, onSelectChannel,
 
   async function exportTarget(target) {
     if (!canExport(target)) return;
-    setError('');
+    setLocalError('');
     try {
       const payload = await createExport({ id: target.id, name: target.name, type: target.type });
       onExportStarted?.(payload.jobId);
       setToast('Exportacao iniciada.');
       window.setTimeout(() => setToast(''), 1800);
     } catch (requestError) {
-      setError(requestError.message);
+      setLocalError(requestError.message);
     }
   }
 
@@ -169,7 +147,8 @@ export function ChannelTree({ selectedChannel, onExportStarted, onSelectChannel,
       <ChannelSearch value={query} onChange={setQuery} />
 
       {status === 'loading' && <Loading label="Carregando canais" />}
-      {status === 'error' && <Toast tone="error">{error}</Toast>}
+      {status === 'error' && <Toast tone="error">{error || localError}</Toast>}
+      {status === 'error' && <button className="button button--ghost" type="button" onClick={onRefresh}>Tentar novamente</button>}
       {toast && <Toast>{toast}</Toast>}
       {status === 'ready' && !filteredCategories.length && (
         <EmptyState title="Nada encontrado" description="Ajuste a busca ou verifique as permissoes do bot." />

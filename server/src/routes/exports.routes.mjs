@@ -22,7 +22,7 @@ exportsRouter.post('/api/exports', requireAuth, async (request, response, next) 
 
 exportsRouter.get('/api/exports/jobs/:jobId', requireAuth, async (request, response, next) => {
   try {
-    response.json(exportsService.getExportJob(request.params.jobId));
+    response.json(await exportsService.getExportJob(request.params.jobId));
   } catch (error) {
     next(error);
   }

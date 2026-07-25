@@ -8,10 +8,11 @@ import { MessagePanel } from '../messages/MessagePanel.jsx';
 import { Sidebar } from './Sidebar.jsx';
 import { TopBar } from './TopBar.jsx';
 import { MobileNav } from './MobileNav.jsx';
+import { useChannelTree } from '../../hooks/useChannelTree.js';
 
 export function AppShell({ children, operator }) {
   const [selectedChannel, setSelectedChannel] = useState(null);
-  const [activeThreads, setActiveThreads] = useState([]);
+  const { tree, status: channelStatus, error: channelError, refresh: refreshChannels } = useChannelTree();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeView, setActiveView] = useState('console');
   const [bot, setBot] = useState(null);
@@ -49,9 +50,7 @@ export function AppShell({ children, operator }) {
     setDownloadsRefreshKey((key) => key + 1);
   }, []);
 
-  const handleTreeLoaded = useCallback((tree) => {
-    setActiveThreads(tree?.activeThreads || []);
-  }, []);
+  const activeThreads = tree?.activeThreads || [];
 
   const handleChangeView = useCallback((view) => {
     setActiveView(view);
@@ -68,9 +67,12 @@ export function AppShell({ children, operator }) {
       <Sidebar bot={bot} open={sidebarOpen}>
         <ChannelTree
           selectedChannel={selectedChannel}
+          tree={tree}
+          status={channelStatus}
+          error={channelError}
+          onRefresh={refreshChannels}
           onExportStarted={handleExportStarted}
           onSelectChannel={selectChannel}
-          onTreeLoaded={handleTreeLoaded}
         />
       </Sidebar>
       <div className="app-main">
@@ -83,7 +85,7 @@ export function AppShell({ children, operator }) {
           {children || (activeView === 'downloads' ? (
             <DownloadsPanel refreshKey={downloadsRefreshKey} />
           ) : activeView === 'automations' ? (
-            <AutomationPanel selectedChannel={selectedChannel} />
+            <AutomationPanel selectedChannel={selectedChannel} channelTree={tree} />
           ) : (
             <MessagePanel
               activeThreads={activeThreads}

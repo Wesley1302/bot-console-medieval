@@ -6,7 +6,7 @@ export function getMessages(channelId, options = {}) {
   if (options.before) params.set('before', String(options.before));
   if (options.after) params.set('after', String(options.after));
   const query = params.toString() ? `?${params.toString()}` : '';
-  return apiFetch(`/api/channels/${channelId}/messages${query}`);
+  return apiFetch(`/api/channels/${channelId}/messages${query}`, { signal: options.signal });
 }
 
 export function sendMessage({ channelId, content = '', files = [] }) {

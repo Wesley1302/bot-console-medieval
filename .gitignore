@@ -8,6 +8,8 @@ logs
 *.log
 .tmp/
 .vercel/
+test-results/
+playwright-report/
 
 .DS_Store
 Thumbs.db

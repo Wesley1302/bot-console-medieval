@@ -1,5 +1,6 @@
 import { env } from '../config/env.mjs';
 import { discordRequest } from './discord.service.mjs';
+import { guildDirectory } from './guild-directory.service.mjs';
 
 export function channelKind(type) {
   if (type === 4) return 'category';
@@ -184,10 +185,8 @@ function normalizeMentionRole(role) {
 export async function searchMentionTargets(query = '') {
   const term = normalizeText(query);
   const [membersPayload, rolesPayload] = await Promise.allSettled([
-    term
-      ? discordRequest(`/guilds/${env.DISCORD_GUILD_ID}/members/search?${new URLSearchParams({ query: term, limit: '25' }).toString()}`, { requireGuild: true })
-      : discordRequest(`/guilds/${env.DISCORD_GUILD_ID}/members?limit=25`, { requireGuild: true }),
-    discordRequest(`/guilds/${env.DISCORD_GUILD_ID}/roles`, { requireGuild: true }),
+    guildDirectory.searchMembers(term, 25),
+    guildDirectory.getRoles(),
   ]);
 
   const users = membersPayload.status === 'fulfilled'
@@ -211,8 +210,8 @@ export async function searchMentionTargets(query = '') {
     { id: 'everyone', type: 'special', label: '@everyone', detail: 'todos no servidor', value: '@everyone', mention: '@everyone' },
   ].filter((item) => !term || normalizeText(`${item.label} ${item.detail}`).includes(term));
 
-  const cleanUsers = users.map(({ searchable, ...item }) => item);
-  const cleanRoles = roles.map(({ searchable, ...item }) => item);
+  const cleanUsers = users.map(({ searchable: _searchable, ...item }) => item);
+  const cleanRoles = roles.map(({ searchable: _searchable, ...item }) => item);
 
   return {
     query: String(query || ''),

@@ -2,12 +2,11 @@ import { discordRequest } from './discord.service.mjs';
 import { channelKind } from './channels.service.mjs';
 import { getBotUser } from './discord.service.mjs';
 import { env } from '../config/env.mjs';
+import { deliveryNonce } from '../utils/deliveryNonce.mjs';
+import { guildDirectory } from './guild-directory.service.mjs';
 
 const DISCORD_MESSAGE_MAX_LENGTH = 2000;
 const MAX_FILES = 5;
-const MEMBER_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
-const memberProfileCache = new Map();
-let roleProfileCache = null;
 
 function createHttpError(message, status) {
   const error = new Error(message);
@@ -35,33 +34,8 @@ function buildAvatarUrl(userId, avatar, guildId = '') {
   return `https://cdn.discordapp.com/avatars/${userId}/${avatar}.${extension}?size=80`;
 }
 
-async function getGuildMemberProfile(userId) {
-  const id = String(userId || '');
-  if (!id || !env.DISCORD_GUILD_ID) return null;
-
-  const cached = memberProfileCache.get(id);
-  if (cached && Date.now() - cached.cachedAt < MEMBER_CACHE_MAX_AGE_MS) return cached.profile;
-
-  try {
-    const member = await discordRequest(`/guilds/${env.DISCORD_GUILD_ID}/members/${id}`, { requireGuild: true });
-    const profile = {
-      nick: member?.nick || null,
-      avatar: member?.avatar || null,
-    };
-    memberProfileCache.set(id, { cachedAt: Date.now(), profile });
-    return profile;
-  } catch (error) {
-    if ([403, 404].includes(error.status)) {
-      memberProfileCache.set(id, { cachedAt: Date.now(), profile: null });
-      return null;
-    }
-    throw error;
-  }
-}
-
 async function loadMemberProfiles(messages) {
   const list = Array.isArray(messages) ? messages : [];
-  const profiles = new Map();
   const userIds = new Set();
 
   for (const message of list) {
@@ -71,24 +45,18 @@ async function loadMemberProfiles(messages) {
     }
   }
 
-  await Promise.all([...userIds].map(async (userId) => {
-    profiles.set(userId, await getGuildMemberProfile(userId));
-  }));
-
-  return profiles;
+  const inlineProfiles = new Map();
+  for (const message of list) {
+    if (message.author?.id && Object.prototype.hasOwnProperty.call(message, 'member')) inlineProfiles.set(String(message.author.id), { nick: message.member?.nick ?? null, avatar: message.member?.avatar ?? null });
+    for (const mention of message.mentions || []) {
+      if (mention?.id && Object.prototype.hasOwnProperty.call(mention, 'member')) inlineProfiles.set(String(mention.id), { nick: mention.member?.nick ?? null, avatar: mention.member?.avatar ?? null });
+    }
+  }
+  return guildDirectory.getMembers(userIds, inlineProfiles);
 }
 
 async function loadRoleProfiles() {
-  if (roleProfileCache && Date.now() - roleProfileCache.cachedAt < MEMBER_CACHE_MAX_AGE_MS) return roleProfileCache.roles;
-
-  try {
-    const roles = await discordRequest(`/guilds/${env.DISCORD_GUILD_ID}/roles`, { requireGuild: true });
-    const byId = new Map((Array.isArray(roles) ? roles : []).map((role) => [String(role.id), role]));
-    roleProfileCache = { cachedAt: Date.now(), roles: byId };
-    return byId;
-  } catch {
-    return new Map();
-  }
+  try { return await guildDirectory.getRoles(); } catch { return new Map(); }
 }
 
 async function enrichMessagesWithGuildMembers(messages) {
@@ -245,7 +213,24 @@ function splitMessageContent(content) {
   return chunks;
 }
 
-export async function sendMessage({ channelId, content, files = [], allowedMentions = null }) {
+export function buildMessagePayload(content, allowedMentions = null, nonce = null) {
+  return {
+    content,
+    ...(allowedMentions ? { allowed_mentions: allowedMentions } : {}),
+    ...(nonce ? { nonce, enforce_nonce: true } : {}),
+  };
+}
+
+export function buildMessageForm(payload, files) {
+  const form = new FormData();
+  form.set('payload_json', JSON.stringify(payload));
+  for (const [index, file] of files.entries()) {
+    form.set(`files[${index}]`, new Blob([file.buffer], { type: file.mimetype || 'application/octet-stream' }), file.originalname);
+  }
+  return form;
+}
+
+export async function sendMessage({ channelId, content, files = [], allowedMentions = null, deliveryKey = null }) {
   const { text, uploads } = validateMessageInput({ channelId, content, files });
   await assertMessageableChannel(channelId);
 
@@ -254,27 +239,18 @@ export async function sendMessage({ channelId, content, files = [], allowedMenti
 
   for (const [chunkIndex, chunk] of chunks.entries()) {
     const includeFiles = chunkIndex === 0 ? uploads : [];
+    const nonce = deliveryKey ? deliveryNonce(deliveryKey, 'chunk', chunkIndex) : null;
+    const payload = buildMessagePayload(chunk, allowedMentions, nonce);
 
     if (includeFiles.length === 0) {
       results.push(await discordRequest(`/channels/${channelId}/messages`, {
         method: 'POST',
-        body: {
-          content: chunk,
-          ...(allowedMentions ? { allowed_mentions: allowedMentions } : {}),
-        },
+        body: payload,
       }));
     } else {
-      const form = new FormData();
-      form.set('payload_json', JSON.stringify({
-        content: chunk,
-        ...(allowedMentions ? { allowed_mentions: allowedMentions } : {}),
-      }));
-      for (const [index, file] of includeFiles.entries()) {
-        form.set(`files[${index}]`, new Blob([file.buffer], { type: file.mimetype || 'application/octet-stream' }), file.originalname);
-      }
       results.push(await discordRequest(`/channels/${channelId}/messages`, {
         method: 'POST',
-        body: form,
+        body: buildMessageForm(payload, includeFiles),
       }));
     }
   }

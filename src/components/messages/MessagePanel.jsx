@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ChevronDown, ChevronUp, Download, Hash, RefreshCw, Search } from 'lucide-react';
 import { createExport } from '../../api/exports.api.js';
 import { deleteMessage, editMessage, getMessages } from '../../api/messages.api.js';
@@ -10,6 +10,7 @@ import { Toast } from '../ui/Toast.jsx';
 import { Composer } from './Composer.jsx';
 import { EditMessageModal } from './EditMessageModal.jsx';
 import { MessageList } from './MessageList.jsx';
+import { mergeLatestMessages, prependOlderMessages } from './messageMerge.js';
 
 function canExportChannel(channel) {
   return ['text', 'announcement', 'thread', 'forum', 'category'].includes(channel?.type);
@@ -50,8 +51,13 @@ export function MessagePanel({
   const [threadsOpen, setThreadsOpen] = useState(false);
   const [messageMenu, setMessageMenu] = useState(null);
   const [refreshStatus, setRefreshStatus] = useState('idle');
+  const refreshInFlightRef = useRef(false);
+  const refreshAbortRef = useRef(null);
+  const selectionGenerationRef = useRef(0);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const generation = ++selectionGenerationRef.current;
     async function loadMessages() {
       if (!selectedChannel?.messageable) return;
       setStatus('loading');
@@ -59,11 +65,13 @@ export function MessagePanel({
       setMessages([]);
       setHasMore(false);
       try {
-        const payload = await getMessages(selectedChannel.id, { limit: 50 });
+        const payload = await getMessages(selectedChannel.id, { limit: 50, signal: controller.signal });
+        if (controller.signal.aborted || generation !== selectionGenerationRef.current) return;
         setMessages(payload.messages || []);
         setHasMore(Boolean(payload.hasMore));
         setStatus('ready');
       } catch (requestError) {
+        if (requestError.name === 'AbortError' || controller.signal.aborted || generation !== selectionGenerationRef.current) return;
         setStatus('error');
         setError(requestError.message);
       }
@@ -72,6 +80,7 @@ export function MessagePanel({
     setMessageQuery('');
     setThreadsOpen(false);
     loadMessages();
+    return () => controller.abort();
   }, [selectedChannel?.id, selectedChannel?.messageable]);
 
   useEffect(() => {
@@ -97,37 +106,32 @@ export function MessagePanel({
     });
   }, [messageQuery, messages]);
 
-  async function refreshLatestMessages({ manual = false } = {}) {
-    if (!selectedChannel?.messageable || refreshStatus === 'loading') return;
+  const refreshLatestMessages = useCallback(async ({ manual = false } = {}) => {
+    if (!selectedChannel?.messageable || refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
+    const controller = new AbortController();
+    refreshAbortRef.current?.abort();
+    refreshAbortRef.current = controller;
     setRefreshStatus('loading');
     if (manual) setError('');
     try {
-      const payload = await getMessages(selectedChannel.id, { limit: 50 });
+      const payload = await getMessages(selectedChannel.id, { limit: 50, signal: controller.signal });
       const latestMessages = payload.messages || [];
-      setMessages((current) => {
-        if (!current.length) return latestMessages;
-        if (!latestMessages.length) return [];
-
-        const latestIds = new Set(latestMessages.map((message) => message.id));
-        const firstLatestId = latestMessages[0]?.id;
-        const boundaryIndex = current.findIndex((message) => message.id === firstLatestId);
-        const olderMessages = boundaryIndex >= 0
-          ? current.slice(0, boundaryIndex)
-          : current.filter((message) => !latestIds.has(message.id) && new Date(message.timestamp || 0) < new Date(latestMessages[0]?.timestamp || 0));
-
-        return [...olderMessages, ...latestMessages];
-      });
+      if (controller.signal.aborted) return;
+      setMessages((current) => mergeLatestMessages(current, latestMessages));
       setHasMore(Boolean(payload.hasMore));
       if (manual) {
         setToast('Canal atualizado.');
         window.setTimeout(() => setToast(''), 1400);
       }
     } catch (requestError) {
-      if (manual) setError(requestError.message);
+      if (manual && requestError.name !== 'AbortError') setError(requestError.message);
     } finally {
+      if (refreshAbortRef.current === controller) refreshAbortRef.current = null;
+      refreshInFlightRef.current = false;
       setRefreshStatus('idle');
     }
-  }
+  }, [selectedChannel?.id, selectedChannel?.messageable]);
 
   useEffect(() => {
     if (status !== 'ready' || !selectedChannel?.messageable) return undefined;
@@ -135,8 +139,11 @@ export function MessagePanel({
       refreshLatestMessages();
     }, 5000);
 
-    return () => window.clearInterval(timer);
-  }, [messages, refreshStatus, selectedChannel?.id, selectedChannel?.messageable, status]);
+    return () => {
+      window.clearInterval(timer);
+      refreshAbortRef.current?.abort();
+    };
+  }, [refreshLatestMessages, selectedChannel?.id, selectedChannel?.messageable, status]);
 
   async function loadOlderMessages() {
     if (!messages.length || olderStatus === 'loading') return;
@@ -146,8 +153,7 @@ export function MessagePanel({
       const payload = await getMessages(selectedChannel.id, { limit: 50, before: messages[0].id });
       const olderMessages = payload.messages || [];
       setMessages((current) => {
-        const existing = new Set(current.map((message) => message.id));
-        return [...olderMessages.filter((message) => !existing.has(message.id)), ...current];
+        return prependOlderMessages(current, olderMessages);
       });
       setHasMore(Boolean(payload.hasMore));
     } catch (requestError) {

@@ -6,9 +6,17 @@ import { messagesService } from './messages.service.mjs';
 import { createId } from '../utils/ids.mjs';
 import { sanitizeFilename } from '../utils/sanitizeFilename.mjs';
 import { sleep } from '../utils/sleep.mjs';
+import { createExportRepository } from './export.repository.mjs';
 
 const exportsRoot = path.join(process.cwd(), 'server', 'exports');
+const jobsRoot = path.join(exportsRoot, '.jobs');
+const MAX_QUEUED_EXPORTS = 5;
+const MAX_BULK_BYTES = 100 * 1024 * 1024;
 const jobs = new Map();
+const queuedIds = [];
+let activeJobId = null;
+const exportRepository = createExportRepository({ root: jobsRoot });
+const workRoot = path.join(exportsRoot, '.work');
 const validTargetTypes = new Set(['text', 'announcement', 'thread', 'forum', 'category']);
 const validFormats = new Set(['json', 'md', 'txt']);
 const validModes = new Set(['combined', 'separate']);
@@ -25,7 +33,27 @@ function nowIso() {
 
 function updateJob(job, patch) {
   Object.assign(job, patch);
+  persistJob(job).catch(() => {});
   return job;
+}
+
+function validateJobId(jobId) {
+  const id = String(jobId || '');
+  if (!id.startsWith('job_') || id.includes('/') || id.includes('\\')) throw httpError('Job de exportacao invalido.', 400);
+  return id;
+}
+
+async function persistJob(job) {
+  validateJobId(job.id);
+  await exportRepository.saveJobAtomic(job);
+}
+
+async function drainQueue() {
+  if (activeJobId || !queuedIds.length) return;
+  activeJobId = queuedIds.shift();
+  try { await runExportJob(activeJobId); }
+  catch (error) { const job = jobs.get(activeJobId); if (job) updateJob(job, { status: 'error', step: 'Erro', progress: 100, error: error.message, completedAt: nowIso() }); }
+  finally { activeJobId = null; void drainQueue(); }
 }
 
 function validateTarget(target) {
@@ -69,7 +97,21 @@ function conversationFromChannel(channel, extra = {}) {
   };
 }
 
+async function saveConversationCheckpoint(exportId, conversation) {
+  const folder = path.join(workRoot, validateExportId(exportId), 'conversations');
+  await fs.mkdir(folder, { recursive: true });
+  const target = path.join(folder, `${sanitizeFilename(conversation.id)}.json`);
+  const temp = `${target}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`;
+  await fs.writeFile(temp, JSON.stringify(conversation));
+  await fs.rename(temp, target);
+}
+
+async function readConversationCheckpoint(exportId, conversationId) {
+  try { return JSON.parse(await fs.readFile(path.join(workRoot, validateExportId(exportId), 'conversations', `${sanitizeFilename(conversationId)}.json`), 'utf8')); } catch { return null; }
+}
+
 export function createExportJob(targetInput) {
+  if (activeJobId || queuedIds.length >= MAX_QUEUED_EXPORTS) throw httpError('Fila de exportacao cheia. Aguarde jobs anteriores terminarem.', 429);
   const target = validateTarget(targetInput);
   const job = {
     id: createId('job'),
@@ -86,16 +128,34 @@ export function createExportJob(targetInput) {
     createdAt: nowIso(),
     startedAt: null,
     completedAt: null,
+    completedConversationIds: [],
   };
   jobs.set(job.id, job);
-  setTimeout(() => runExportJob(job.id), 0);
+  persistJob(job).catch(() => {});
+  queuedIds.push(job.id);
+  setTimeout(() => { void drainQueue(); }, 0);
   return { ok: true, jobId: job.id, status: job.status };
 }
 
-export function getExportJob(jobId) {
-  const job = jobs.get(String(jobId || ''));
+export async function getExportJob(jobId) {
+  const id = validateJobId(jobId);
+  let job = jobs.get(id);
+  if (!job) {
+    job = await exportRepository.loadJob(id);
+    if (job) jobs.set(id, job);
+  }
   if (!job) throw httpError('Job de exportacao nao encontrado.', 404);
   return job;
+}
+
+export async function initExports() {
+  await fs.mkdir(jobsRoot, { recursive: true });
+  for (const job of await exportRepository.listRecoverableJobs()) {
+    if (job.status === 'running') job.status = 'queued';
+    jobs.set(job.id, job);
+    if (job.status === 'queued' && !queuedIds.includes(job.id)) queuedIds.push(job.id);
+  }
+  void drainQueue();
 }
 
 export async function expandTargetToConversations(target, job) {
@@ -156,8 +216,10 @@ export async function fetchAllMessagesForExport(channelId, job) {
     for (;;) {
       updateJob(job, { step: 'Baixando mensagens' });
       const payload = await messagesService.listMessages(channelId, { limit: 100, before });
-      messages.unshift(...payload.messages.filter((message) => !messages.some((item) => item.id === message.id)));
-      job.totalMessages += payload.messages.length;
+      const seenIds = new Set(messages.map((message) => message.id));
+      const unique = payload.messages.filter((message) => !seenIds.has(message.id));
+      messages.unshift(...unique);
+      job.totalMessages += unique.length;
       if (!payload.hasMore || !payload.messages.length) break;
       before = payload.messages[0].id;
       await sleep(350);
@@ -292,25 +354,36 @@ export async function writeExportFiles(exportData) {
 }
 
 export async function runExportJob(jobId) {
-  const job = getExportJob(jobId);
+  const job = await getExportJob(jobId);
   try {
     updateJob(job, { status: 'running', startedAt: nowIso(), step: 'Buscando conversas', progress: 2 });
-    const exportId = createId('export');
+    const exportId = job.exportId || createId('export');
+    updateJob(job, { exportId });
     const conversations = await expandTargetToConversations(job.target, job);
     updateJob(job, { totalConversations: conversations.length, progress: 12 });
+    job.completedConversations = 0;
+    job.totalMessages = 0;
     const errors = [];
     const exported = [];
 
     for (const conversation of conversations) {
-      if (conversation.emptyOnly) {
-        exported.push({ ...conversation, messages: [] });
+      let completed = job.completedConversationIds?.includes(conversation.id) ? await readConversationCheckpoint(exportId, conversation.id) : null;
+      if (!completed && conversation.emptyOnly) {
+        completed = { ...conversation, messages: [] };
       } else {
         const result = await fetchAllMessagesForExport(conversation.id, job);
         if (result.error) errors.push({ ...result.error, name: conversation.name });
-        exported.push({ ...conversation, messages: result.messages });
+        completed = { ...conversation, messages: result.messages };
       }
+      if (!completed) completed = { ...conversation, messages: [] };
+      if (!job.completedConversationIds) job.completedConversationIds = [];
+      await saveConversationCheckpoint(exportId, completed);
+      if (!job.completedConversationIds.includes(conversation.id)) job.completedConversationIds.push(conversation.id);
+      exported.push(completed);
+      job.totalMessages += completed.messages?.length || 0;
       job.completedConversations += 1;
       job.progress = Math.min(88, Math.round((job.completedConversations / Math.max(job.totalConversations, 1)) * 80) + 10);
+      await persistJob(job);
     }
 
     updateJob(job, { step: 'Gerando arquivos', progress: 92 });
@@ -392,6 +465,9 @@ export async function bulkDownloadExports({ ids, format = 'json', mode = 'combin
   if (!validModes.has(mode)) throw httpError('Modo invalido. Use combined ou separate.');
 
   const manifests = await Promise.all(ids.map(readManifest));
+  const fileName = { json: 'data.json', md: 'export.md', txt: 'export.txt' }[format];
+  const sizes = await Promise.all(manifests.map((manifest) => fs.stat(path.join(exportDir(manifest.id), fileName)).then((stat) => stat.size)));
+  if (sizes.reduce((total, size) => total + size, 0) > MAX_BULK_BYTES) throw httpError('Lote muito grande. Baixe as exportacoes em grupos menores.', 413);
   if (mode === 'combined') {
     if (format === 'json') {
       const exports = await Promise.all(ids.map(getExportPackage));
@@ -438,4 +514,5 @@ export const exportsService = {
   renderMarkdown,
   renderText,
   readManifest,
+  initExports,
 };

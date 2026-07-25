@@ -9,11 +9,15 @@
     "dev:all": "concurrently \"npm run dev:server\" \"npm run dev\"",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "check:server": "node scripts/check-server-syntax.mjs",
+    "test:server": "node scripts/run-server-tests.mjs",
+    "test:frontend": "vitest",
+    "test:e2e": "playwright test",
+    "lint": "eslint .",
+    "check": "npm run check:server && npm run lint && npm run test:server && npm run test:frontend -- --run && npm run build"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "^5.1.1",
-    "concurrently": "^9.2.1",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -21,7 +25,24 @@
     "lucide-react": "^0.561.0",
     "multer": "^2.1.1",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "vite": "^7.3.0"
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.62.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@vitejs/plugin-react": "^5.1.1",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.4.26",
+    "globals": "^16.5.0",
+    "jsdom": "^27.4.0",
+    "supertest": "^7.2.2",
+    "vite": "^7.3.0",
+    "vitest": "^3.2.7"
   }
 }

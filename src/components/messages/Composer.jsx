@@ -1,6 +1,6 @@
 import { Plus, Send, X } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { searchMentions } from '../../api/channels.api.js';
+import { listMentions } from '../../api/mentions.api.js';
 import { sendMessage } from '../../api/messages.api.js';
 import { Button } from '../ui/Button.jsx';
 import { Toast } from '../ui/Toast.jsx';
@@ -72,7 +72,7 @@ export function Composer({ selectedChannel, onMessageSent }) {
     const timer = window.setTimeout(async () => {
       setMentionStatus('loading');
       try {
-        const payload = await searchMentions(mentionTrigger.query);
+        const payload = await listMentions(mentionTrigger.query);
         if (active) setMentionResults(payload.results || []);
       } catch {
         if (active) setMentionResults([]);

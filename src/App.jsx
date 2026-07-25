@@ -26,6 +26,15 @@ export default function App() {
     loadSession();
   }, []);
 
+  useEffect(() => {
+    function handleSessionExpired() {
+      setOperator(null);
+      setAuthStatus('anonymous');
+    }
+    window.addEventListener('bcm:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('bcm:session-expired', handleSessionExpired);
+  }, []);
+
   async function handleLogin(password) {
     const payload = await login(password);
     setOperator(payload.operator);

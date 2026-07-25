@@ -3,6 +3,8 @@
 ## Produto
 Painel operacional para um administrador controlar um bot Discord, navegar por canais e topicos, consultar e enviar mensagens, exportar conversas e configurar automacoes.
 
+O roadmap de evolucao da V2 esta em `docs/v2/README.md` e permanece separado da baseline da V1.
+
 ## Usuarios
 - Operador autenticado responsavel pela administracao do bot e do servidor.
 - Uso recorrente em desktop e mobile, com prioridade para leitura rapida e acoes seguras.

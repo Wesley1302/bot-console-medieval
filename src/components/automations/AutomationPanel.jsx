@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { listAutomations } from '../../api/automations.api.js';
 import { Button } from '../ui/Button.jsx';
@@ -8,12 +8,15 @@ import { Toast } from '../ui/Toast.jsx';
 import { AutomationCard } from './AutomationCard.jsx';
 import { AutomationForm } from './AutomationForm.jsx';
 
-export function AutomationPanel({ selectedChannel }) {
+export function AutomationPanel({ selectedChannel, channelTree }) {
   const [automations, setAutomations] = useState([]);
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
+  const requestInFlight = useRef(false);
 
-  async function loadAutomations({ quiet = false } = {}) {
+  const loadAutomations = useCallback(async ({ quiet = false } = {}) => {
+    if (requestInFlight.current) return;
+    requestInFlight.current = true;
     if (!quiet) setStatus('loading');
     setError('');
     try {
@@ -24,11 +27,12 @@ export function AutomationPanel({ selectedChannel }) {
       setError(requestError.message);
       setStatus('error');
     }
-  }
+    requestInFlight.current = false;
+  }, []);
 
   useEffect(() => {
     loadAutomations();
-  }, []);
+  }, [loadAutomations]);
 
   const hasRunning = useMemo(() => automations.some((automation) => automation.status === 'running'), [automations]);
 
@@ -36,7 +40,7 @@ export function AutomationPanel({ selectedChannel }) {
     if (!hasRunning) return undefined;
     const intervalId = window.setInterval(() => loadAutomations({ quiet: true }), 2000);
     return () => window.clearInterval(intervalId);
-  }, [hasRunning]);
+  }, [hasRunning, loadAutomations]);
 
   return (
     <section className="automation-panel">
@@ -52,7 +56,7 @@ export function AutomationPanel({ selectedChannel }) {
       </header>
 
       <div className="automation-layout">
-        <AutomationForm selectedChannel={selectedChannel} onCreated={() => loadAutomations({ quiet: true })} />
+        <AutomationForm selectedChannel={selectedChannel} channelTree={channelTree} onCreated={() => loadAutomations({ quiet: true })} />
 
         <div className="automation-list">
           {error && <Toast tone="error">{error}</Toast>}

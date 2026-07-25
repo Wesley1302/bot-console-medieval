@@ -8,7 +8,7 @@ import { Toast } from '../ui/Toast.jsx';
 function ThreadRow({ onExportThread, onSelectThread, thread }) {
   const timerRef = useRef(null);
 
-  function startLongPress(event) {
+  function startLongPress(_event) {
     timerRef.current = window.setTimeout(() => {
       onExportThread?.(thread);
     }, 520);
@@ -45,21 +45,25 @@ export function ForumThreadList({ forum, onExportThread, onSelectThread }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const controller = new AbortController();
     async function loadThreads() {
       setStatus('loading');
       setError('');
       try {
-        const payload = await getForumThreads(forum.id);
+        const payload = await getForumThreads(forum.id, { signal: controller.signal });
+        if (controller.signal.aborted) return;
         setThreads(payload.threads || []);
         setWarnings(payload.warnings || []);
         setStatus((payload.threads || []).length ? 'ready' : 'empty');
       } catch (requestError) {
+        if (requestError.name === 'AbortError' || controller.signal.aborted) return;
         setStatus('error');
         setError(requestError.message);
       }
     }
 
     if (forum?.id) loadThreads();
+    return () => controller.abort();
   }, [forum?.id]);
 
   return (

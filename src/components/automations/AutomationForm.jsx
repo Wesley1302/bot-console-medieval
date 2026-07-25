@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { getChannels } from '../../api/channels.api.js';
 import { createAutomation } from '../../api/automations.api.js';
 import { insertAtCursor } from '../../utils/insertAtCursor.js';
 import { MentionPicker } from '../mentions/MentionPicker.jsx';
@@ -56,7 +55,7 @@ function isAutomationTarget(channel) {
   return channel?.messageable && ['text', 'announcement', 'thread'].includes(channel.type);
 }
 
-export function AutomationForm({ selectedChannel, onCreated }) {
+export function AutomationForm({ selectedChannel, channelTree, onCreated }) {
   const [channels, setChannels] = useState([]);
   const [channelId, setChannelId] = useState('');
   const [desktopMode, setDesktopMode] = useState(false);
@@ -83,12 +82,17 @@ export function AutomationForm({ selectedChannel, onCreated }) {
   }, []);
 
   useEffect(() => {
+    if (channelTree) {
+      const options = flattenMessageableChannels(channelTree);
+      setChannels(options);
+      setChannelId((current) => current || options[0]?.id || '');
+      return undefined;
+    }
     let active = true;
 
     async function loadChannels() {
       try {
-        const tree = await getChannels();
-        const options = flattenMessageableChannels(tree);
+        const options = [];
         if (!active) return;
         setChannels(options);
         setChannelId((current) => current || options[0]?.id || '');
@@ -101,11 +105,11 @@ export function AutomationForm({ selectedChannel, onCreated }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [channelTree]);
 
   useEffect(() => {
     if (isAutomationTarget(selectedChannel)) setChannelId(selectedChannel.id);
-  }, [selectedChannel?.id]);
+  }, [selectedChannel]);
 
   const messages = useMemo(() => splitMessages(body), [body]);
   const totalCharacters = useMemo(() => messages.reduce((total, message) => total + message.length, 0), [messages]);

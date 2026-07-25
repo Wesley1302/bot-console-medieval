@@ -23,7 +23,6 @@ export const corsMiddleware = cors({
       !origin
       || origin === selfOrigin
       || (!env.IS_PRODUCTION && isLocalProjectOrigin(origin))
-      || allowedOrigins.includes('*')
       || allowedOrigins.includes(origin)
     ) {
       callback(null, true);

@@ -11,8 +11,8 @@ export function createExport(target) {
   });
 }
 
-export function getExportJob(jobId) {
-  return apiFetch(`/api/exports/jobs/${jobId}`);
+export function getExportJob(jobId, options = {}) {
+  return apiFetch(`/api/exports/jobs/${jobId}`, { signal: options.signal });
 }
 
 export function getExportDownloadUrl(exportId, format = 'json') {

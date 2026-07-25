@@ -1316,7 +1316,7 @@ textarea {
   }
 }
 
-@media (min-width: 901px) {
+@media (min-width: 981px) {
   .automation-panel {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
