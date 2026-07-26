@@ -81,7 +81,6 @@ export function AiPanel({ channelTree }) {
 
   const categories = channelTree?.categories || [];
   const activeThreads = channelTree?.activeThreads || [];
-  const selectableCategories = categories.filter((category) => !category.virtual);
 
   const selectedTargets = useMemo(() => [...selected.values()], [selected]);
 
@@ -154,17 +153,21 @@ export function AiPanel({ channelTree }) {
         <form onSubmit={submit}>
           <fieldset className="ai-scope">
             <legend>Locais da pesquisa</legend>
-            {selectableCategories.map((category) => {
+            {categories.map((category) => {
               const children = category.channels || [];
               const selectedChildren = children.filter((item) => selected.has(item.id)).length;
               return (
                 <div key={category.id}>
-                  <ScopeCheckbox
-                    area={category}
-                    checked={selected.has(category.id)}
-                    partial={selectedChildren > 0 && selectedChildren < children.length}
-                    onToggle={toggle}
-                  />
+                  {category.virtual
+                    ? <strong className="ai-scope__group-title">{category.name}</strong>
+                    : (
+                        <ScopeCheckbox
+                          area={category}
+                          checked={selected.has(category.id)}
+                          partial={selectedChildren > 0 && selectedChildren < children.length}
+                          onToggle={toggle}
+                        />
+                      )}
                   <div className="ai-scope__children">
                     {children.map((area) => (
                       <ScopeCheckbox key={area.id} area={area} checked={selected.has(area.id)} onToggle={toggle} />

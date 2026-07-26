@@ -2,8 +2,17 @@ import { expect, test } from '@playwright/test';
 
 const tree = {
   guildId: 'guild',
-  categories: [{ id: 'cat', name: 'Categoria', type: 'category', channels: [{ id: 'channel', name: 'qa', type: 'text', messageable: true, allowed: true }] }],
-  activeThreads: [],
+  categories: [{
+    id: 'uncategorized',
+    name: 'SEM CATEGORIA',
+    type: 'category',
+    virtual: true,
+    channels: [
+      { id: 'channel', name: 'qa-sem-categoria', type: 'text', messageable: true, allowed: true },
+      { id: 'forum', name: 'forum-sem-categoria', type: 'forum', messageable: false, allowed: true },
+    ],
+  }],
+  activeThreads: [{ id: 'thread', name: 'topico-ativo', type: 'thread', messageable: true, allowed: true }],
 };
 
 async function mockApi(page) {
@@ -43,6 +52,10 @@ test('IA permanece utilizavel sem overflow em desktop e mobile', async ({ page }
     await page.locator('button:visible').filter({ hasText: /^IA$/ }).click();
     await expect(page.getByRole('heading', { name: 'Assistente de IA' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Base de conhecimento' })).toHaveCount(0);
+    const scope = page.getByRole('group', { name: 'Locais da pesquisa' });
+    await expect(scope.getByText('qa-sem-categoria')).toBeVisible();
+    await expect(scope.getByText('forum-sem-categoria')).toBeVisible();
+    await expect(scope.getByText('topico-ativo')).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(1);
     await page.screenshot({ path: `test-results/ai-${viewport.width}.png`, fullPage: true });

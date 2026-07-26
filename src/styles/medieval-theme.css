@@ -1462,6 +1462,15 @@ textarea {
   padding-left: 18px;
 }
 
+.ai-scope__group-title {
+  display: block;
+  padding: 7px 6px 4px;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .ai-panel__workspace {
   background: oklch(9% 0.014 282 / 58%);
 }
