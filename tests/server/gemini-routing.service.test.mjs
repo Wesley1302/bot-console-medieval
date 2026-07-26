@@ -63,6 +63,43 @@ test('Gemini respeita o limite local e usa o proximo modelo', async () => {
   assert.equal(calls.length, 2);
 });
 
+test('Gemini tenta novamente quando acorda no limite do cooldown', async () => {
+  let currentTime = 0;
+  let recovering = false;
+  let calls = 0;
+  const client = createGeminiClient({
+    apiKey: 'test-key',
+    baseUrl: 'https://example.test',
+    models: ['quality'],
+    limits: { quality: 4 },
+    cooldownMs: 60_000,
+    now: () => currentTime,
+    sleep: async (milliseconds) => {
+      if (recovering) currentTime += Math.max(0, milliseconds - 1);
+    },
+    fetchImpl: async () => {
+      calls += 1;
+      if (recovering) return success('recovered');
+      return new Response(JSON.stringify({ error: { message: 'quota' } }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json', 'retry-after': '60' },
+      });
+    },
+  });
+
+  await assert.rejects(
+    () => client.generate('system', 'prime cooldown'),
+    (error) => error.status === 429,
+  );
+
+  recovering = true;
+  const result = await client.generate('system', 'retry after cooldown');
+
+  assert.equal(result.model, 'quality');
+  assert.equal(result.result.summary, 'recovered');
+  assert.equal(calls, 2);
+});
+
 test('Gemini nao mascara erro de autenticacao com fallback', async () => {
   let calls = 0;
   const client = createGeminiClient({

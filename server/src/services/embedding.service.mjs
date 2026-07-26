@@ -139,7 +139,7 @@ export function createGeminiClient(options = {}) {
   async function generate(system, prompt) {
     if (!apiKey || !models.length) assertAiConfig();
     let lastError = null;
-    for (let cycle = 0; cycle < 2; cycle += 1) {
+    for (let cycle = 0; cycle < 3; cycle += 1) {
       let shortestDelay = Infinity;
       let attempted = false;
       for (const model of models) {
@@ -179,8 +179,9 @@ export function createGeminiClient(options = {}) {
           shortestDelay = Math.min(shortestDelay, delayMs);
         }
       }
-      if (cycle === 0 && Number.isFinite(shortestDelay)) {
-        await wait(Math.min(Math.max(shortestDelay, attempted ? 250 : 1), 60_000));
+      if (cycle < 2 && Number.isFinite(shortestDelay)) {
+        const wakeAfterCooldown = shortestDelay + 250;
+        await wait(Math.min(Math.max(wakeAfterCooldown, attempted ? 250 : 1), 60_250));
         continue;
       }
       break;
