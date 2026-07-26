@@ -140,12 +140,16 @@ export function createMessageIndexRepository(db = database) {
   async function searchSemantic({ guildId, channelIds, embedding, dateFrom, dateTo, limit }) {
     if (!embedding?.length) return [];
     const result = await db.query(
-      `SELECT *, 1 - (embedding <=> $3::vector) AS relevance_score
-       FROM indexed_messages
-       WHERE guild_id = $1 AND channel_id = ANY($2::text[])
-         AND embedding IS NOT NULL
-         AND ($4::timestamptz IS NULL OR created_at >= $4)
-         AND ($5::timestamptz IS NULL OR created_at <= $5)
+      `WITH compatible_messages AS MATERIALIZED (
+         SELECT * FROM indexed_messages
+         WHERE guild_id = $1 AND channel_id = ANY($2::text[])
+           AND embedding IS NOT NULL
+           AND vector_dims(embedding) = vector_dims($3::vector)
+           AND ($4::timestamptz IS NULL OR created_at >= $4)
+           AND ($5::timestamptz IS NULL OR created_at <= $5)
+       )
+       SELECT *, 1 - (embedding <=> $3::vector) AS relevance_score
+       FROM compatible_messages
        ORDER BY embedding <=> $3::vector LIMIT $6`,
       [guildId, channelIds, vectorLiteral(embedding), dateFrom || null, dateTo || null, limit],
     );
