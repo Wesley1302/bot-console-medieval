@@ -71,6 +71,9 @@ export function CleanupModal({ target, onClose }) {
     }
   }
 
+  const processedWork = (job?.processedMessages || 0) + (job?.processedThreads || 0);
+  const estimatedWork = (job?.estimatedMessages || 0) + (job?.estimatedThreads || 0);
+
   return (
     <Modal open={Boolean(target)} title="Limpar mensagens" onClose={onClose}>
       <div className="cleanup-modal">
@@ -82,13 +85,19 @@ export function CleanupModal({ target, onClose }) {
               <AlertTriangle size={20} />
               <div>
                 <strong>Acao irreversivel</strong>
-                <p>As mensagens serao apagadas do Discord e removidas do indice local.</p>
+                <p>
+                  As mensagens serao apagadas do Discord e removidas do indice local.
+                  {preview.estimatedThreads > 0
+                    ? ` ${preview.estimatedThreads} topico(s) serao excluidos por inteiro.`
+                    : ''}
+                </p>
               </div>
             </div>
             <dl className="cleanup-summary">
               <div><dt>Alvo</dt><dd>{preview.target.name}</dd></div>
               <div><dt>Tipo</dt><dd>{preview.target.type}</dd></div>
-              <div><dt>Estimativa local</dt><dd>{preview.estimatedMessages} mensagens</dd></div>
+              <div><dt>Mensagens diretas</dt><dd>{preview.estimatedMessages}</dd></div>
+              <div><dt>Topicos a excluir</dt><dd>{preview.estimatedThreads || 0}</dd></div>
               <div><dt>Locais afetados</dt><dd>{preview.resolvedTargets.length}</dd></div>
               <div><dt>Inacessiveis</dt><dd>{preview.inaccessibleTargets.length}</dd></div>
             </dl>
@@ -97,6 +106,13 @@ export function CleanupModal({ target, onClose }) {
                 <span key={item.id}>{item.name}</span>
               ))}
             </div>
+            {preview.threadsToDelete?.length > 0 && (
+              <div className="cleanup-targets" aria-label="Topicos que serao excluidos">
+                {preview.threadsToDelete.map((item) => (
+                  <span key={item.id}>{item.name}</span>
+                ))}
+              </div>
+            )}
             {preview.confirmationText && (
               <label className="field">
                 <span>Digite exatamente: <strong>{preview.confirmationText}</strong></span>
@@ -125,11 +141,11 @@ export function CleanupModal({ target, onClose }) {
             <div className="job-progress">
               <div className="job-progress__header">
                 <strong>{job.status}</strong>
-                <span>{job.processedMessages}/{job.estimatedMessages || '?'}</span>
+                <span>{processedWork}/{estimatedWork || '?'}</span>
               </div>
               <progress
-                max={Math.max(job.estimatedMessages || job.processedMessages || 1, 1)}
-                value={job.processedMessages || 0}
+                max={Math.max(estimatedWork || processedWork || 1, 1)}
+                value={processedWork}
               />
             </div>
             <dl className="cleanup-summary">
@@ -137,7 +153,10 @@ export function CleanupModal({ target, onClose }) {
               <div><dt>Excluidas</dt><dd>{job.deletedMessages}</dd></div>
               <div><dt>Falhas</dt><dd>{job.failedMessages}</dd></div>
               <div><dt>Ignoradas</dt><dd>{job.skippedMessages}</dd></div>
+              <div><dt>Topicos excluidos</dt><dd>{job.deletedThreads || 0}</dd></div>
+              <div><dt>Falhas em topicos</dt><dd>{job.failedThreads || 0}</dd></div>
             </dl>
+            {job.error && <Toast tone="error">{job.error}</Toast>}
             {!terminal.has(job.status) && (
               <div className="modal__actions">
                 {job.status === 'paused' ? (

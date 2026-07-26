@@ -7,8 +7,8 @@ export function createCleanupRepository(db = database) {
       `INSERT INTO cleanup_jobs (
         id, guild_id, target_type, target_id, target_name, status,
         resolved_scope_json, inaccessible_targets_json, warnings_json,
-        estimated_messages, confirmation_token, confirmation_expires_at
-      ) VALUES ($1,$2,$3,$4,$5,'awaiting_confirmation',$6,$7,$8,$9,$10,$11)
+        estimated_messages, estimated_threads, confirmation_token, confirmation_expires_at
+      ) VALUES ($1,$2,$3,$4,$5,'awaiting_confirmation',$6,$7,$8,$9,$10,$11,$12)
       RETURNING *`,
       [
         input.id,
@@ -20,6 +20,7 @@ export function createCleanupRepository(db = database) {
         JSON.stringify(input.inaccessibleTargets || []),
         JSON.stringify(input.warnings || []),
         input.estimatedMessages || 0,
+        input.estimatedThreads || 0,
         input.confirmationTokenHash,
         input.expiresAt,
       ],
@@ -128,6 +129,63 @@ export function createCleanupRepository(db = database) {
     return camelRows(result.rows);
   }
 
+  async function addThreadItems(jobId, threads) {
+    if (!threads.length) return;
+    await db.transaction(async (client) => {
+      for (const thread of threads) {
+        await client.query(
+          `INSERT INTO cleanup_thread_items
+            (cleanup_job_id, thread_id, thread_name, status)
+           VALUES ($1,$2,$3,'queued')
+           ON CONFLICT (cleanup_job_id, thread_id) DO NOTHING`,
+          [jobId, String(thread.id), String(thread.name || thread.id)],
+        );
+      }
+      await client.query(
+        `UPDATE cleanup_jobs SET estimated_threads = GREATEST(
+           estimated_threads,
+           (SELECT count(*)::integer FROM cleanup_thread_items WHERE cleanup_job_id = $1)
+         ) WHERE id = $1`,
+        [jobId],
+      );
+    });
+  }
+
+  async function listPendingThreads(jobId, limit = 50) {
+    const result = await db.query(
+      `SELECT * FROM cleanup_thread_items
+       WHERE cleanup_job_id = $1 AND status = 'queued'
+       ORDER BY id LIMIT $2`,
+      [jobId, limit],
+    );
+    return camelRows(result.rows);
+  }
+
+  async function completeThread(jobId, threadId, status, error = null) {
+    return db.transaction(async (client) => {
+      const item = await client.query(
+        `UPDATE cleanup_thread_items
+         SET status = $3, error = $4, processed_at = now()
+         WHERE cleanup_job_id = $1 AND thread_id = $2 AND status = 'queued'
+         RETURNING id`,
+        [jobId, String(threadId), status, error],
+      );
+      if (!item.rowCount) return false;
+      await client.query(
+        `UPDATE cleanup_jobs SET
+           processed_threads = processed_threads + 1,
+           deleted_threads = deleted_threads + CASE WHEN $2 = 'deleted' THEN 1 ELSE 0 END,
+           failed_threads = failed_threads + CASE WHEN $2 = 'failed' THEN 1 ELSE 0 END,
+           skipped_threads = skipped_threads + CASE WHEN $2 = 'skipped' THEN 1 ELSE 0 END,
+           locked_at = now(),
+           error = CASE WHEN $2 = 'failed' THEN $3 ELSE error END
+         WHERE id = $1`,
+        [jobId, status, error],
+      );
+      return true;
+    });
+  }
+
   async function markItems(jobId, messageIds, status, error = null) {
     if (!messageIds.length) return;
     await db.query(
@@ -200,6 +258,9 @@ export function createCleanupRepository(db = database) {
     heartbeat,
     addItems,
     listPendingItems,
+    addThreadItems,
+    listPendingThreads,
+    completeThread,
     markItems,
     updateProgress,
     setAction,

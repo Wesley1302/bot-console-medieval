@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import request from 'supertest';
 import { createApp } from '../../server/src/app.mjs';
-import { buildChannelTree, channelKind, normalizeChannel } from '../../server/src/services/channels.service.mjs';
+import {
+  buildChannelTree,
+  channelKind,
+  mergeThreadsForParent,
+  normalizeChannel,
+} from '../../server/src/services/channels.service.mjs';
 import { validateAutomationInput } from '../../server/src/services/automations.service.mjs';
 import { buildExportData, renderMarkdown, renderText } from '../../server/src/services/exports.service.mjs';
 import { normalizeMessage } from '../../server/src/services/messages.service.mjs';
@@ -54,6 +59,26 @@ test('buildChannelTree retorna grupo virtual para servidor sem categorias', () =
   assert.equal(tree.categories.length, 1);
   assert.equal(tree.categories[0].virtual, true);
   assert.equal(tree.categories[0].name, 'SEM CATEGORIA');
+});
+
+test('mergeThreadsForParent une topicos ativos e arquivados sem duplicar', () => {
+  const threads = mergeThreadsForParent('parent-1', [
+    [{ id: 'active', name: 'Ativo', type: 11, parent_id: 'parent-1' }],
+    [
+      {
+        id: 'archived',
+        name: 'Arquivado',
+        type: 11,
+        parent_id: 'parent-1',
+        thread_metadata: { archived: true },
+      },
+      { id: 'other', name: 'Outro', type: 11, parent_id: 'parent-2' },
+    ],
+    [{ id: 'active', name: 'Ativo duplicado', type: 11, parent_id: 'parent-1' }],
+  ]);
+
+  assert.deepEqual(threads.map((thread) => thread.id), ['active', 'archived']);
+  assert.equal(threads[1].archived, true);
 });
 
 test('normalizeMessage preserva identidade do servidor, anexos, mencoes e cargos', () => {
@@ -197,6 +222,10 @@ test('contratos HTTP de health, auth/me e protecao permanecem estaveis', async (
   const protectedResponse = await request(app).get('/api/status');
   assert.equal(protectedResponse.status, 401);
   assert.equal(protectedResponse.body.message, 'Não autenticado.');
+
+  const protectedThreads = await request(app).get('/api/channels/channel-1/threads');
+  assert.equal(protectedThreads.status, 401);
+  assert.equal(protectedThreads.body.message, 'Não autenticado.');
 });
 
 test('health rejeita uma rota operacional desconhecida sem quebrar o app', async () => {

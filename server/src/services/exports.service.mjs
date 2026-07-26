@@ -162,11 +162,11 @@ export async function expandTargetToConversations(target, job) {
   updateJob(job, { step: 'Buscando conversas', progress: 5 });
   if (['text', 'announcement'].includes(target.type)) {
     const activeThreads = await channelsService.listActiveThreads();
+    const payload = await channelsService.listChannelThreads(target.id, { activeThreads });
+    job.warnings.push(...(payload.warnings || []));
     return [
       { id: target.id, name: target.name, type: target.type, parentId: null, parentName: null },
-      ...activeThreads
-        .filter((thread) => String(thread.parent_id) === target.id)
-        .map((thread) => conversationFromChannel(thread, { parentName: target.name })),
+      ...payload.threads.map((thread) => ({ ...thread, parentName: target.name })),
     ];
   }
 
@@ -175,7 +175,7 @@ export async function expandTargetToConversations(target, job) {
   }
 
   if (target.type === 'forum') {
-    const payload = await channelsService.listForumThreads(target.id);
+    const payload = await channelsService.listChannelThreads(target.id);
     job.warnings.push(...(payload.warnings || []));
     if (!payload.threads.length) {
       return [{ id: target.id, name: target.name, type: 'forum', parentId: null, parentName: null, emptyOnly: true }];
@@ -194,13 +194,16 @@ export async function expandTargetToConversations(target, job) {
     if (['text', 'announcement'].includes(kind)) {
       const normalized = conversationFromChannel(child, { parentName: target.name });
       conversations.push(normalized);
-      conversations.push(...activeThreads
-        .filter((thread) => String(thread.parent_id) === normalized.id)
-        .map((thread) => conversationFromChannel(thread, { parentName: normalized.name })));
+      const payload = await channelsService.listChannelThreads(normalized.id, { activeThreads });
+      job.warnings.push(...(payload.warnings || []));
+      conversations.push(...payload.threads.map((thread) => ({
+        ...thread,
+        parentName: normalized.name,
+      })));
     }
     if (kind === 'forum') {
       const forum = normalizeChannel(child);
-      const payload = await channelsService.listForumThreads(forum.id);
+      const payload = await channelsService.listChannelThreads(forum.id, { activeThreads });
       job.warnings.push(...(payload.warnings || []));
       conversations.push(...payload.threads.map((thread) => ({ ...thread, parentName: forum.name })));
     }

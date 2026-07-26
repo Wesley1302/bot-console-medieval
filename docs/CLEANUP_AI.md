@@ -73,12 +73,19 @@ No menu contextual de categoria, canal, forum ou topico:
 
 1. Abra `Limpar`.
 2. Revise escopo, estimativa e locais inacessiveis.
-3. Em categoria/forum, digite a confirmacao textual exata.
+3. Em categoria/forum, ou em canal com topicos, digite a confirmacao textual exata.
 4. Inicie e acompanhe processadas, excluidas, falhas e ignoradas.
 
 O token de confirmacao expira em 15 minutos. Mensagens recentes podem usar bulk
 delete; mensagens antigas sao excluidas individualmente. Pausa e cancelamento
 ocorrem entre lotes, preservando uma chamada que ja esteja em andamento.
+
+Ao limpar uma categoria, canal ou forum, todas as threads descendentes sao
+excluidas por inteiro pelo Discord, incluindo suas mensagens e anexos. Os canais,
+foruns e a categoria permanecem existentes. Ao selecionar diretamente uma
+thread, apenas as mensagens sao removidas e a thread e preservada. A estimativa
+separa mensagens diretas, apagadas individualmente, dos topicos excluidos por
+inteiro.
 
 ## Assistente De IA
 

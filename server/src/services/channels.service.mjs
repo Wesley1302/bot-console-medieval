@@ -101,7 +101,7 @@ export async function listChannelsTree() {
   return buildChannelTree(channels, activeThreads);
 }
 
-async function listArchivedThreads(forumId, privacy) {
+async function listArchivedThreads(parentId, privacy) {
   const threads = [];
   const warnings = [];
   let before = '';
@@ -111,12 +111,18 @@ async function listArchivedThreads(forumId, privacy) {
     if (before) params.set('before', before);
 
     try {
-      const payload = await discordRequest(`/channels/${forumId}/threads/archived/${privacy}?${params.toString()}`);
+      const payload = await discordRequest(`/channels/${parentId}/threads/archived/${privacy}?${params.toString()}`);
       const page = Array.isArray(payload?.threads) ? payload.threads : [];
       threads.push(...page);
       if (!payload?.has_more || page.length === 0) break;
-      before = page.at(-1)?.thread_metadata?.archive_timestamp || page.at(-1)?.archive_timestamp || '';
-      if (!before) break;
+      const nextBefore = page.at(-1)?.thread_metadata?.archive_timestamp
+        || page.at(-1)?.archive_timestamp
+        || '';
+      if (!nextBefore || nextBefore === before) {
+        warnings.push('A paginacao de topicos arquivados nao avancou e foi interrompida com seguranca.');
+        break;
+      }
+      before = nextBefore;
     } catch (error) {
       if (privacy === 'private' && error.status === 403) {
         warnings.push('Sem permissao para listar topicos privados arquivados.');
@@ -129,21 +135,42 @@ async function listArchivedThreads(forumId, privacy) {
   return { threads, warnings };
 }
 
-export async function listForumThreads(forumId) {
-  const activeThreads = (await listActiveThreads()).filter((thread) => String(thread.parent_id) === String(forumId));
-  const publicArchived = await listArchivedThreads(forumId, 'public');
-  const privateArchived = await listArchivedThreads(forumId, 'private');
+export function mergeThreadsForParent(parentId, collections = []) {
   const byId = new Map();
 
-  for (const thread of [...activeThreads, ...publicArchived.threads, ...privateArchived.threads]) {
-    if (String(thread.parent_id) === String(forumId)) byId.set(String(thread.id), thread);
+  for (const thread of collections.flat()) {
+    if (String(thread.parent_id) === String(parentId)) byId.set(String(thread.id), thread);
   }
+  return [...byId.values()].map((thread) => normalizeChannel(thread)).sort(sortThreads);
+}
+
+export async function listChannelThreads(parentId, options = {}) {
+  const activeSource = Array.isArray(options.activeThreads)
+    ? options.activeThreads
+    : await listActiveThreads();
+  const activeThreads = activeSource.filter(
+    (thread) => String(thread.parent_id) === String(parentId),
+  );
+  const [publicArchived, privateArchived] = await Promise.all([
+    listArchivedThreads(parentId, 'public'),
+    listArchivedThreads(parentId, 'private'),
+  ]);
+  const threads = mergeThreadsForParent(parentId, [
+    activeThreads,
+    publicArchived.threads,
+    privateArchived.threads,
+  ]);
 
   return {
-    forumId: String(forumId),
-    threads: [...byId.values()].map((thread) => normalizeChannel(thread)).sort(sortThreads),
+    parentId: String(parentId),
+    forumId: String(parentId),
+    threads,
     warnings: [...publicArchived.warnings, ...privateArchived.warnings],
   };
+}
+
+export function listForumThreads(forumId, options = {}) {
+  return listChannelThreads(forumId, options);
 }
 
 function normalizeMentionUser(member) {
@@ -233,6 +260,8 @@ export const channelsService = {
   listActiveThreads,
   buildChannelTree,
   listChannelsTree,
+  listChannelThreads,
   listForumThreads,
+  mergeThreadsForParent,
   searchMentionTargets,
 };

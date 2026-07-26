@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ChevronDown, ChevronUp, Download, Hash, RefreshCw, Search } from 'lucide-react';
+import { getChannelThreads } from '../../api/channels.api.js';
 import { createExport } from '../../api/exports.api.js';
 import { deleteMessage, editMessage, getMessages } from '../../api/messages.api.js';
 import { ForumThreadList } from '../forums/ForumThreadList.jsx';
@@ -49,6 +50,8 @@ export function MessagePanel({
   const [editingMessage, setEditingMessage] = useState(null);
   const [messageQuery, setMessageQuery] = useState('');
   const [threadsOpen, setThreadsOpen] = useState(false);
+  const [channelThreads, setChannelThreads] = useState([]);
+  const [threadWarnings, setThreadWarnings] = useState([]);
   const [messageMenu, setMessageMenu] = useState(null);
   const [refreshStatus, setRefreshStatus] = useState('idle');
   const refreshInFlightRef = useRef(false);
@@ -92,10 +95,31 @@ export function MessagePanel({
     return () => window.removeEventListener('click', closeMenu);
   }, []);
 
-  const channelThreads = useMemo(() => {
-    if (!selectedChannel?.id) return [];
-    return activeThreads.filter((thread) => thread.parentId === selectedChannel.id);
-  }, [activeThreads, selectedChannel?.id]);
+  useEffect(() => {
+    const controller = new AbortController();
+    const active = selectedChannel?.id
+      ? activeThreads.filter((thread) => thread.parentId === selectedChannel.id)
+      : [];
+    setChannelThreads(active);
+    setThreadWarnings([]);
+
+    if (!['text', 'announcement'].includes(selectedChannel?.type)) {
+      return () => controller.abort();
+    }
+
+    getChannelThreads(selectedChannel.id, { signal: controller.signal })
+      .then((payload) => {
+        if (controller.signal.aborted) return;
+        setChannelThreads(payload.threads || []);
+        setThreadWarnings(payload.warnings || []);
+      })
+      .catch((requestError) => {
+        if (requestError.name === 'AbortError' || controller.signal.aborted) return;
+        setThreadWarnings([requestError.message]);
+      });
+
+    return () => controller.abort();
+  }, [activeThreads, selectedChannel?.id, selectedChannel?.type]);
 
   const visibleMessages = useMemo(() => {
     const query = messageQuery.trim().toLowerCase();
@@ -298,14 +322,17 @@ export function MessagePanel({
     <section className="message-panel">
       {renderChatHeader(selectedChannel.type === 'thread' ? 'Topico Discord' : 'Canal Discord')}
 
-      {threadsOpen && channelThreads.length > 0 && (
+      {threadsOpen && (
         <div className="channel-thread-drawer">
-          {channelThreads.map((thread) => (
-            <button key={thread.id} type="button" onClick={() => onSelectChannel(thread)}>
-              <Hash size={16} />
-              <span>{thread.name}</span>
-            </button>
-          ))}
+          {threadWarnings.map((warning) => <Toast key={warning}>{warning}</Toast>)}
+          {channelThreads.length > 0
+            ? channelThreads.map((thread) => (
+                <button key={thread.id} type="button" onClick={() => onSelectChannel(thread)}>
+                  <Hash size={16} />
+                  <span>{thread.name}</span>
+                </button>
+              ))
+            : <span>Nenhum topico encontrado neste canal.</span>}
         </div>
       )}
 

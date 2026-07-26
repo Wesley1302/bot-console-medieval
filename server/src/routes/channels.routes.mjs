@@ -20,6 +20,14 @@ channelsRouter.get('/api/forums/:forumId/threads', requireAuth, async (request, 
   }
 });
 
+channelsRouter.get('/api/channels/:channelId/threads', requireAuth, async (request, response, next) => {
+  try {
+    response.json(await channelsService.listChannelThreads(request.params.channelId));
+  } catch (error) {
+    next(error);
+  }
+});
+
 channelsRouter.get('/api/mentions', requireAuth, async (request, response, next) => {
   try {
     response.json(await channelsService.searchMentionTargets(request.query.query || ''));

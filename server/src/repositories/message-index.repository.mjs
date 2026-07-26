@@ -110,6 +110,31 @@ export function createMessageIndexRepository(db = database) {
     });
   }
 
+  async function deleteByChannels(channelIds) {
+    const ids = [...new Set((channelIds || []).map(String).filter(Boolean))];
+    if (!ids.length) return;
+    await db.transaction(async (client) => {
+      await client.query(
+        `UPDATE query_evidence SET excerpt = NULL, source_available = false
+         WHERE source_type = 'discord_message'
+           AND source_id IN (
+             SELECT discord_message_id FROM indexed_messages
+             WHERE channel_id = ANY($1::text[])
+           )`,
+        [ids],
+      );
+      await client.query(
+        'DELETE FROM indexed_messages WHERE channel_id = ANY($1::text[])',
+        [ids],
+      );
+      await client.query(
+        `UPDATE discord_areas SET accessible = false, updated_at = now()
+         WHERE discord_id = ANY($1::text[])`,
+        [ids],
+      );
+    });
+  }
+
   async function countByChannels(channelIds, dateFrom = null, dateTo = null) {
     if (!channelIds.length) return 0;
     const result = await db.query(
@@ -185,6 +210,7 @@ export function createMessageIndexRepository(db = database) {
     markAreaSynced,
     upsertMessage,
     deleteMessages,
+    deleteByChannels,
     countByChannels,
     searchText,
     searchSemantic,

@@ -33,6 +33,8 @@ function safeEqual(left, right) {
 function publicJob(job) {
   if (!job) return null;
   const safe = { ...job };
+  safe.estimatedThreads = Number(job.estimatedThreads)
+    || (job.targetType === 'thread' ? 0 : job.resolvedScopeJson?.resolvedThreads?.length || 0);
   delete safe.confirmationToken;
   delete safe.lockedAt;
   delete safe.lockedBy;
@@ -64,17 +66,25 @@ export function createCleanupService(dependencies = {}) {
     const resolvedScope = await deps.resolver.resolve([
       { id: targetId, name: targetName, type: normalizedType },
     ]);
-    const channelIds = [
+    const threadsToDelete = normalizedType === 'thread' ? [] : resolvedScope.resolvedThreads;
+    const estimatedThreads = threadsToDelete.length;
+    const messageTargetIds = normalizedType === 'thread'
+      ? resolvedScope.resolvedThreads.map((item) => item.id)
+      : resolvedScope.resolvedChannels.map((item) => item.id);
+    const resolvedTargetIds = [
       ...resolvedScope.resolvedChannels.map((item) => item.id),
       ...resolvedScope.resolvedThreads.map((item) => item.id),
     ];
-    const estimatedMessages = await deps.index.countByChannels(channelIds);
+    const estimatedMessages = await deps.index.countByChannels(messageTargetIds);
     const token = deps.randomBytes(4).toString('hex').toUpperCase();
     const expiresAt = new Date(deps.now().getTime() + PREVIEW_TTL_MS);
     const warnings = [
       ...resolvedScope.warnings,
       'A quantidade e uma estimativa do indice local; o Discord sera consultado durante a execucao.',
       'A exclusao e irreversivel e remove texto, anexos, embeds e stickers.',
+      ...(estimatedThreads
+        ? [`${estimatedThreads} topico(s) serao excluidos por inteiro, incluindo todas as mensagens internas.`]
+        : []),
     ];
     const job = await deps.repository.createPreview({
       id: deps.randomUUID(),
@@ -86,6 +96,7 @@ export function createCleanupService(dependencies = {}) {
       inaccessibleTargets: resolvedScope.inaccessibleTargets,
       warnings,
       estimatedMessages,
+      estimatedThreads,
       confirmationTokenHash: tokenHash(token),
       expiresAt,
     });
@@ -93,7 +104,7 @@ export function createCleanupService(dependencies = {}) {
       jobId: job.id,
       targetType: normalizedType,
       targetId,
-      resolvedTargets: channelIds.length,
+      resolvedTargets: resolvedTargetIds.length,
       estimatedMessages,
     });
 
@@ -105,10 +116,14 @@ export function createCleanupService(dependencies = {}) {
         ...resolvedScope.resolvedThreads,
       ],
       estimatedMessages,
+      estimatedThreads,
+      threadsToDelete,
       inaccessibleTargets: resolvedScope.inaccessibleTargets,
       warnings,
       confirmationToken: token,
-      confirmationText: destructiveTypes.has(normalizedType) ? `LIMPAR ${targetName}` : null,
+      confirmationText: destructiveTypes.has(normalizedType) || estimatedThreads > 0
+        ? `LIMPAR ${targetName}`
+        : null,
       expiresAt: expiresAt.toISOString(),
     };
   }
@@ -125,7 +140,9 @@ export function createCleanupService(dependencies = {}) {
     if (!safeEqual(tokenHash(token), job.confirmationToken)) {
       throw httpError('Token de confirmacao invalido.');
     }
-    if (destructiveTypes.has(job.targetType)) {
+    const deletesThreads = job.targetType !== 'thread'
+      && (job.resolvedScopeJson?.resolvedThreads?.length || 0) > 0;
+    if (destructiveTypes.has(job.targetType) || deletesThreads) {
       const expected = `LIMPAR ${job.targetName}`;
       if (String(input?.confirmationText || '').trim() !== expected) {
         throw httpError(`Digite exatamente: ${expected}`);

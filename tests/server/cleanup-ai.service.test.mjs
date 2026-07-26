@@ -39,6 +39,7 @@ test('scope resolver expande categoria e remove alvos duplicados', async () => {
 
 test('limpeza exige token e texto reforcado antes de entrar na fila', async () => {
   let stored;
+  let countedChannels;
   const repository = {
     createPreview: async (input) => {
       stored = {
@@ -57,12 +58,17 @@ test('limpeza exige token e texto reforcado antes de entrar na fila', async () =
     resolver: {
       resolve: async () => ({
         resolvedChannels: [{ id: 'channel-1', name: 'canal', type: 'text' }],
-        resolvedThreads: [],
+        resolvedThreads: [{ id: 'thread-1', name: 'topico', type: 'thread' }],
         inaccessibleTargets: [],
         warnings: [],
       }),
     },
-    index: { countByChannels: async () => 12 },
+    index: {
+      countByChannels: async (channelIds) => {
+        countedChannels = channelIds;
+        return 12;
+      },
+    },
     guildId: 'guild-1',
     now: () => new Date('2026-07-25T12:00:00Z'),
     randomUUID: () => 'preview-1',
@@ -70,6 +76,10 @@ test('limpeza exige token e texto reforcado antes de entrar na fila', async () =
     logger: { info() {}, warn() {}, error() {} },
   });
   const preview = await service.preview({ targetType: 'category', targetId: 'cat-1', targetName: 'Casa' });
+  assert.equal(preview.estimatedThreads, 1);
+  assert.deepEqual(countedChannels, ['channel-1']);
+  assert.deepEqual(preview.threadsToDelete.map((thread) => thread.id), ['thread-1']);
+  assert.match(preview.warnings.at(-1), /excluidos por inteiro/);
   await assert.rejects(
     service.createJob({ previewId: preview.previewId, confirmationToken: 'errado', confirmationText: 'LIMPAR Casa' }),
     /Token de confirmacao invalido/,
@@ -137,6 +147,110 @@ test('worker remove indice somente depois de exclusao confirmada pelo Discord', 
   await worker.processChannel({ id: 'job-1' }, 'channel-1');
   assert.deepEqual(deletedFromIndex, ['message-1']);
   assert.equal(requests.some(([path, method]) => path.endsWith('/message-1') && method === 'DELETE'), true);
+});
+
+test('worker exclui topicos inteiros ao limpar categoria, canal ou forum', async () => {
+  const requests = [];
+  const removedChannels = [];
+  const pendingThreads = [{ threadId: 'thread-1', threadName: 'topico' }];
+  const state = {
+    status: 'running',
+    lockedBy: 'worker-1',
+    cancelRequestedAt: null,
+    failedMessages: 0,
+    failedThreads: 0,
+    deletedThreads: 0,
+  };
+  const repository = {
+    getJob: async () => state,
+    addThreadItems: async (_jobId, threads) => {
+      assert.deepEqual(threads.map((thread) => thread.id), ['thread-1']);
+    },
+    listPendingThreads: async () => pendingThreads.splice(0, 50),
+    completeThread: async (_jobId, _threadId, status) => {
+      if (status === 'deleted') state.deletedThreads += 1;
+      if (status === 'failed') state.failedThreads += 1;
+      return true;
+    },
+    finish: async (_jobId, status) => {
+      state.status = status;
+      return state;
+    },
+  };
+  const worker = createCleanupWorker({
+    repository,
+    index: {
+      deleteMessages: async () => {},
+      deleteByChannels: async (ids) => removedChannels.push(...ids),
+    },
+    workerId: 'worker-1',
+    discordRequest: async (path, options = {}) => {
+      requests.push([path, options.method || 'GET']);
+      return null;
+    },
+    logger: { info() {}, warn() {}, error() {} },
+  });
+
+  await worker.run({
+    id: 'job-1',
+    targetType: 'forum',
+    resolvedScopeJson: {
+      resolvedChannels: [],
+      resolvedThreads: [{ id: 'thread-1', name: 'topico', type: 'thread' }],
+    },
+  });
+
+  assert.deepEqual(requests, [['/channels/thread-1', 'DELETE']]);
+  assert.deepEqual(removedChannels, ['thread-1']);
+  assert.equal(state.deletedThreads, 1);
+  assert.equal(state.status, 'completed');
+});
+
+test('worker preserva a thread quando ela e o alvo direto da limpeza', async () => {
+  const requests = [];
+  const state = {
+    status: 'running',
+    lockedBy: 'worker-1',
+    cancelRequestedAt: null,
+    failedMessages: 0,
+    failedThreads: 0,
+  };
+  const repository = {
+    getJob: async () => state,
+    listPendingItems: async () => [],
+    heartbeat: async () => {},
+    finish: async (_jobId, status) => {
+      state.status = status;
+      return state;
+    },
+  };
+  const worker = createCleanupWorker({
+    repository,
+    index: { deleteMessages: async () => {} },
+    workerId: 'worker-1',
+    discordRequest: async (path, options = {}) => {
+      requests.push([path, options.method || 'GET']);
+      if (path.includes('/messages?')) return [];
+      return null;
+    },
+    logger: { info() {}, warn() {}, error() {} },
+  });
+
+  await worker.run({
+    id: 'job-1',
+    targetType: 'thread',
+    resolvedScopeJson: {
+      resolvedChannels: [],
+      resolvedThreads: [{ id: 'thread-1', name: 'topico', type: 'thread' }],
+    },
+  });
+
+  assert.equal(
+    requests.some(([path, method]) => path === '/channels/thread-1' && method === 'DELETE'),
+    false,
+  );
+  assert.equal(requests.some(([path]) => path.includes('/channels/thread-1/messages?')), true);
+  assert.equal(state.status, 'completed');
 });
 
 test('message index recalcula hash e embedding em criacao ou edicao', async () => {

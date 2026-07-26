@@ -2,6 +2,7 @@ BEGIN;
 
 DROP TABLE IF EXISTS technical_events;
 DROP TABLE IF EXISTS cleanup_job_items;
+DROP TABLE IF EXISTS cleanup_thread_items;
 DROP TABLE IF EXISTS cleanup_jobs;
 DROP TABLE IF EXISTS query_evidence;
 DROP TABLE IF EXISTS ai_queries;

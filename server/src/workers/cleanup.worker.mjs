@@ -128,13 +128,55 @@ export function createCleanupWorker(dependencies = {}) {
     }
   }
 
-  async function run(job) {
-    const targets = [
-      ...(job.resolvedScopeJson?.resolvedChannels || []),
-      ...(job.resolvedScopeJson?.resolvedThreads || []),
-    ];
+  async function deleteThread(job, thread) {
+    const threadId = String(thread.threadId || thread.id);
+    let status = 'deleted';
+    let failure = null;
     try {
-      deps.logger.info('cleanup_job_started', { jobId: job.id, targets: targets.length });
+      await deps.discordRequest(`/channels/${threadId}`, { method: 'DELETE' });
+    } catch (error) {
+      if (error.status === 404) status = 'skipped';
+      else {
+        status = 'failed';
+        failure = error.status === 403
+          ? 'O bot precisa da permissao Manage Threads para excluir este topico.'
+          : error.message;
+      }
+    }
+    if (status !== 'failed') await deps.index.deleteByChannels([threadId]);
+    await deps.repository.completeThread(job.id, threadId, status, failure);
+    deps.logger.info('Topico da limpeza processado.', {
+      jobId: job.id,
+      threadId,
+      status,
+    });
+  }
+
+  async function processThreads(job, threads) {
+    await deps.repository.addThreadItems(job.id, threads);
+    for (;;) {
+      if (await control(job.id) !== 'running') return;
+      const items = await deps.repository.listPendingThreads(job.id, 50);
+      if (!items.length) return;
+      for (const item of items) {
+        if (await control(job.id) !== 'running') return;
+        await deleteThread(job, item);
+      }
+    }
+  }
+
+  async function run(job) {
+    const channels = job.resolvedScopeJson?.resolvedChannels || [];
+    const threads = job.resolvedScopeJson?.resolvedThreads || [];
+    const deletesThreads = job.targetType !== 'thread';
+    const targets = deletesThreads ? channels : [...channels, ...threads];
+    try {
+      deps.logger.info('cleanup_job_started', {
+        jobId: job.id,
+        targets: targets.length,
+        threadsToDelete: deletesThreads ? threads.length : 0,
+      });
+      if (deletesThreads) await processThreads(job, threads);
       for (const target of targets) {
         const state = await control(job.id);
         if (state === 'paused') return;
@@ -152,13 +194,16 @@ export function createCleanupWorker(dependencies = {}) {
         await deps.repository.finish(job.id, 'cancelled');
         return;
       }
-      const finalStatus = current?.failedMessages > 0 ? 'partial' : 'completed';
+      const finalStatus = current?.failedMessages > 0 || current?.failedThreads > 0
+        ? 'partial'
+        : 'completed';
       await deps.repository.finish(job.id, finalStatus);
       deps.logger.info('cleanup_job_completed', {
         jobId: job.id,
         status: finalStatus,
         processedMessages: current?.processedMessages || 0,
         deletedMessages: current?.deletedMessages || 0,
+        deletedThreads: current?.deletedThreads || 0,
       });
     } catch (error) {
       deps.logger.error('Job de limpeza falhou.', { jobId: job.id, reason: error.message });
@@ -174,7 +219,13 @@ export function createCleanupWorker(dependencies = {}) {
     return true;
   }
 
-  return { processOnce, run, processChannel, constants: { RECENT_LIMIT_MS, STALE_LOCK_MS } };
+  return {
+    processOnce,
+    run,
+    processChannel,
+    processThreads,
+    constants: { RECENT_LIMIT_MS, STALE_LOCK_MS },
+  };
 }
 
 export const cleanupWorker = createCleanupWorker();
