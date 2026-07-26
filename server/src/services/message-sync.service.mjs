@@ -52,18 +52,23 @@ export function createMessageSyncService(dependencies = {}) {
     let pages = 0;
     let indexed = 0;
     let done = false;
+    let truncated = false;
+    const maxPages = Math.max(1, Number(options.maxPages || 10_000));
 
     while (!done) {
       const payload = await deps.messages.listMessages(area.id, { limit: 100, before });
       const messages = payload.messages || [];
       if (!messages.length) break;
 
-      for (const message of messages) {
-        if (inPeriod(message.timestamp, options.dateFrom, options.dateTo)) {
-          await deps.index.indexMessage(message);
-          indexed += 1;
-        }
+      const messagesInPeriod = messages.filter((message) => (
+        inPeriod(message.timestamp, options.dateFrom, options.dateTo)
+      ));
+      if (deps.index.indexMessages) {
+        await deps.index.indexMessages(messagesInPeriod);
+      } else {
+        for (const message of messagesInPeriod) await deps.index.indexMessage(message);
       }
+      indexed += messagesInPeriod.length;
 
       const oldest = messages[0];
       const olderThanWindow = options.dateFrom
@@ -71,23 +76,27 @@ export function createMessageSyncService(dependencies = {}) {
         && new Date(oldest.timestamp) < new Date(options.dateFrom);
       before = oldest?.id || null;
       pages += 1;
+      await options.onPageComplete?.({ area, pages, indexed });
+      truncated = !incremental && payload.hasMore && Boolean(before)
+        && !olderThanWindow && pages >= maxPages;
       done = incremental || !payload.hasMore || !before
-        || olderThanWindow || pages >= (options.maxPages || 10_000);
+        || olderThanWindow || truncated;
     }
 
     await deps.repository.markAreaSynced(
       area.id,
       new Date(),
-      !options.dateFrom && !options.dateTo,
+      !options.dateFrom && !options.dateTo && !truncated,
     );
     deps.logger.info('message_sync_area_completed', {
       areaId: area.id,
       indexedMessages: indexed,
       pages,
       incremental,
+      truncated,
     });
     await options.onAreaComplete?.(area);
-    return { areaId: area.id, indexed, pages };
+    return { areaId: area.id, indexed, pages, truncated };
   }
 
   async function syncResolvedScope(resolvedScope, options = {}) {
@@ -99,6 +108,7 @@ export function createMessageSyncService(dependencies = {}) {
     return {
       areas: results.length,
       messages: results.reduce((sum, item) => sum + item.indexed, 0),
+      truncatedAreas: results.filter((item) => item.truncated).map((item) => item.areaId),
       results,
     };
   }

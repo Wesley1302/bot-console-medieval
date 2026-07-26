@@ -4,6 +4,7 @@ import { createScopeResolver } from '../../server/src/services/scope-resolver.se
 import { createCleanupService } from '../../server/src/services/cleanup.service.mjs';
 import { createCleanupWorker } from '../../server/src/workers/cleanup.worker.mjs';
 import { createMessageIndexService } from '../../server/src/services/message-index.service.mjs';
+import { createMessageSyncService } from '../../server/src/services/message-sync.service.mjs';
 import { validateQueryInput } from '../../server/src/services/ai.service.mjs';
 import { createAiWorker } from '../../server/src/workers/ai.worker.mjs';
 import { createKnowledgeService } from '../../server/src/services/knowledge.service.mjs';
@@ -278,6 +279,94 @@ test('message index recalcula hash e embedding em criacao ou edicao', async () =
   assert.notEqual(first.sourceHash, edited.sourceHash);
   assert.deepEqual(saved[1].embedding, [7, 1]);
   assert.equal(saved[1].embeddingStatus, 'ready');
+});
+
+test('message index gera embeddings em lote para uma pagina inteira', async () => {
+  const saved = [];
+  const embeddingCalls = [];
+  const service = createMessageIndexService({
+    guildId: 'guild-1',
+    embeddingModel: 'embed-test',
+    embed: async (contents) => {
+      embeddingCalls.push(contents);
+      return contents.map((content) => [content.length, 1]);
+    },
+    repository: {
+      upsertMessage: async (message) => saved.push(message),
+      deleteMessages: async () => {},
+    },
+  });
+
+  const indexed = await service.indexMessages([
+    {
+      id: 'message-1', channelId: 'channel-1',
+      author: { id: 'user-1', displayName: 'Membro' },
+      content: 'primeira', timestamp: '2026-07-25T12:00:00Z',
+    },
+    {
+      id: 'message-2', channelId: 'channel-1',
+      author: { id: 'user-2', displayName: 'Outro' },
+      content: 'segunda mensagem', timestamp: '2026-07-25T12:01:00Z',
+    },
+    {
+      id: 'message-3', channelId: 'channel-1',
+      author: { id: 'user-3', displayName: 'Sem texto' },
+      content: '', timestamp: '2026-07-25T12:02:00Z',
+    },
+  ]);
+
+  assert.deepEqual(embeddingCalls, [['primeira', 'segunda mensagem']]);
+  assert.equal(indexed.length, 3);
+  assert.equal(saved.length, 3);
+  assert.deepEqual(indexed[1].embedding, [16, 1]);
+  assert.equal(indexed[2].embeddingStatus, 'skipped');
+});
+
+test('sincronizacao limita paginas, usa lote e renova heartbeat por pagina', async () => {
+  const batches = [];
+  const heartbeats = [];
+  const syncMarkers = [];
+  let page = 0;
+  const service = createMessageSyncService({
+    guildId: 'guild-1',
+    repository: {
+      getArea: async () => null,
+      upsertArea: async () => {},
+      markAreaSynced: async (...args) => syncMarkers.push(args),
+    },
+    messages: {
+      listMessages: async () => {
+        page += 1;
+        return {
+          messages: [{
+            id: `message-${page}`,
+            channelId: 'channel-1',
+            content: `pagina ${page}`,
+            timestamp: `2026-07-25T12:0${page}:00Z`,
+          }],
+          hasMore: true,
+        };
+      },
+    },
+    index: {
+      indexMessages: async (messages) => batches.push(messages.map((message) => message.id)),
+    },
+    logger: { info() {}, warn() {}, error() {} },
+  });
+
+  const result = await service.syncArea(
+    { id: 'channel-1', name: 'canal', type: 'text' },
+    {
+      maxPages: 2,
+      onPageComplete: (progress) => heartbeats.push(progress.pages),
+    },
+  );
+
+  assert.deepEqual(batches, [['message-1'], ['message-2']]);
+  assert.deepEqual(heartbeats, [1, 2]);
+  assert.equal(result.pages, 2);
+  assert.equal(result.truncated, true);
+  assert.equal(syncMarkers[0][2], false);
 });
 
 test('validacao de IA cobre escopo, periodo e classificacao', () => {

@@ -64,6 +64,10 @@ export const env = {
   KNOWLEDGE_SOURCE_PATH: process.env.KNOWLEDGE_SOURCE_PATH || '',
   JOB_CONCURRENCY: Math.max(1, Number(process.env.JOB_CONCURRENCY || 2)),
   MESSAGE_SYNC_CONCURRENCY: Math.max(1, Number(process.env.MESSAGE_SYNC_CONCURRENCY || 3)),
+  AI_SYNC_MAX_PAGES_PER_AREA: Math.max(
+    1,
+    Number(process.env.AI_SYNC_MAX_PAGES_PER_AREA || 10),
+  ),
   RECONCILIATION_INTERVAL_MINUTES: Math.max(5, Number(process.env.RECONCILIATION_INTERVAL_MINUTES || 60)),
   AI_MAX_EVIDENCES: Math.max(1, Number(process.env.AI_MAX_EVIDENCES || 30)),
   AI_MAX_CONTEXT_TOKENS: Math.max(1000, Number(process.env.AI_MAX_CONTEXT_TOKENS || 24000)),

@@ -103,6 +103,7 @@ export function createAiWorker(dependencies = {}) {
     generate: dependencies.generate || generateStructuredResponse,
     workerId: dependencies.workerId || `ai-${process.pid}`,
     guildId: dependencies.guildId || env.DISCORD_GUILD_ID,
+    syncMaxPages: dependencies.syncMaxPages || env.AI_SYNC_MAX_PAGES_PER_AREA,
   };
 
   async function cancelled(queryId) {
@@ -124,11 +125,14 @@ export function createAiWorker(dependencies = {}) {
         await deps.repository.finishCancelled(query.id);
         return true;
       }
-      await deps.sync.syncResolvedScope(resolved, {
+      const syncResult = await deps.sync.syncResolvedScope(resolved, {
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
+        maxPages: deps.syncMaxPages,
+        onPageComplete: () => deps.repository.heartbeat(query.id, deps.workerId),
         onAreaComplete: () => deps.repository.heartbeat(query.id, deps.workerId),
       });
+      const partialSync = syncResult.truncatedAreas?.length > 0;
       for (const area of areas) {
         await deps.messages.upsertArea({ ...area, guildId: deps.guildId });
       }
@@ -202,7 +206,7 @@ export function createAiWorker(dependencies = {}) {
           facts: [], interpretations: [], hypotheses: [], recommendations: [],
           affectedHouses: [], lawsAndTraditions: [],
           limitations: ['Nenhuma evidencia recuperada.'],
-        }, resolved.inaccessibleTargets.length ? 'partial' : 'completed');
+        }, resolved.inaccessibleTargets.length || partialSync ? 'partial' : 'completed');
         return true;
       }
       if (queryType === 'factual' && extractAuthorId(query.prompt)) {
@@ -224,7 +228,7 @@ export function createAiWorker(dependencies = {}) {
           lawsAndTraditions: [],
           limitations: first ? [] : ['Nenhuma evidencia recuperada.'],
           durationMs: Date.now() - started,
-        }, resolved.inaccessibleTargets.length ? 'partial' : 'completed');
+        }, resolved.inaccessibleTargets.length || partialSync ? 'partial' : 'completed');
         return true;
       }
       if (await cancelled(query.id)) {
@@ -249,13 +253,18 @@ export function createAiWorker(dependencies = {}) {
         return true;
       }
       const result = validateResult(generated.result, queryType, evidence.map((item) => item.id));
+      if (partialSync) {
+        result.limitations.push(
+          'A sincronizacao desta consulta foi limitada ao historico mais recente para responder mais rapido.',
+        );
+      }
       result.usage = generated.usage || null;
       result.model = generated.model || query.model || env.AI_MODEL;
       result.durationMs = Date.now() - started;
       await deps.repository.complete(
         query.id,
         result,
-        resolved.inaccessibleTargets.length ? 'partial' : 'completed',
+        resolved.inaccessibleTargets.length || partialSync ? 'partial' : 'completed',
       );
       logger.info('ai_query_completed', {
         queryId: query.id,
