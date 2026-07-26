@@ -62,6 +62,54 @@ test('Gemini solicita resposta no contrato estruturado do worker', async () => {
   assert.deepEqual(schema.properties.facts.items.required, ['statement', 'evidenceIds']);
 });
 
+test('Gemini configura e valida a dimensao dos embeddings em lote', async () => {
+  let requestBody;
+  const client = createGeminiClient({
+    apiKey: 'test-key',
+    baseUrl: 'https://example.test',
+    models: ['quality'],
+    limits: { quality: 4 },
+    fetchImpl: async (_url, options) => {
+      requestBody = JSON.parse(options.body);
+      return new Response(JSON.stringify({
+        embeddings: [{ values: [0.1, 0.2, 0.3] }],
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    },
+  });
+
+  const embeddings = await client.embed(['texto'], 'embedding-model', 3);
+
+  assert.deepEqual(embeddings, [[0.1, 0.2, 0.3]]);
+  assert.equal(
+    requestBody.requests[0].embedContentConfig.outputDimensionality,
+    3,
+  );
+  assert.equal(requestBody.requests[0].outputDimensionality, undefined);
+});
+
+test('Gemini rejeita embedding com dimensao inesperada antes do banco', async () => {
+  const client = createGeminiClient({
+    apiKey: 'test-key',
+    baseUrl: 'https://example.test',
+    models: ['quality'],
+    limits: { quality: 4 },
+    fetchImpl: async () => new Response(JSON.stringify({
+      embeddings: [{ values: [0.1, 0.2, 0.3, 0.4] }],
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
+
+  await assert.rejects(
+    () => client.embed(['texto'], 'embedding-model', 3),
+    (error) => error.status === 502 && /dimensao diferente de 3/.test(error.message),
+  );
+});
+
 test('Gemini respeita o limite local e usa o proximo modelo', async () => {
   const calls = [];
   let currentTime = 10_000;

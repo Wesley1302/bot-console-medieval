@@ -5,6 +5,7 @@ const conservativeRpm = {
   'gemini-3.6-flash': 4,
   'gemini-3.5-flash-lite': 12,
   'gemini-3.1-flash-lite': 12,
+  'gemini-3.1-flash-lite-preview': 12,
 };
 
 const evidenceItemSchema = {
@@ -240,10 +241,18 @@ export function createGeminiClient(options = {}) {
             requests: batch.map((text) => ({
               model: `models/${model}`,
               content: { parts: [{ text }] },
-              outputDimensionality: dimensions,
+              embedContentConfig: { outputDimensionality: dimensions },
             })),
           });
-          output.push(...(payload.embeddings || []).map((item) => item.values || []));
+          const embeddings = (payload.embeddings || []).map((item) => item.values || []);
+          if (embeddings.length !== batch.length
+            || embeddings.some((embedding) => embedding.length !== dimensions)) {
+            throw httpError(
+              `O provedor retornou embeddings com dimensao diferente de ${dimensions}.`,
+              502,
+            );
+          }
+          output.push(...embeddings);
           lastError = null;
           break;
         } catch (error) {
