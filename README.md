@@ -49,6 +49,10 @@ DISCORD_GUILD_ID=id_do_servidor
 
 Leia tambem `docs/SECRETS.md` antes de configurar ou trocar credenciais reais.
 
+Para o assistente Gemini e a base textual local, consulte
+`docs/GEMINI_KNOWLEDGE.md`. A chave fica somente no `.env`; os arquivos privados
+da base permanecem fora do Git.
+
 Para autenticar o operador, configure:
 
 ```env
@@ -188,11 +192,15 @@ Comandos principais:
 
 ```bash
 npm run db:migrate
+npm run knowledge:sync -- --dry-run
+npm run knowledge:sync
 npm run worker
 ```
 
 O Discord permanece como fonte oficial das mensagens. Criacoes e edicoes
 atualizam o indice; exclusoes removem fisicamente conteudo e embedding.
+O conhecimento complementar vem da pasta configurada em
+`KNOWLEDGE_SOURCE_PATH`. O upload manual de documentos nao aparece no painel.
 
 Sem login, rotas protegidas retornam `401`. Com login, canais, foruns/topicos, leitura de mensagens, envio/edicao/exclusao, exportacoes e automacoes ja estao funcionais.
 

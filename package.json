@@ -12,6 +12,7 @@
     "start": "node server.mjs",
     "worker": "node worker.mjs",
     "db:migrate": "node scripts/migrate-database.mjs",
+    "knowledge:sync": "node scripts/sync-knowledge-directory.mjs",
     "check:server": "node scripts/check-server-syntax.mjs",
     "test:server": "node scripts/run-server-tests.mjs",
     "test:frontend": "vitest",

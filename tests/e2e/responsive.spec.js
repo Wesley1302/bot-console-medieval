@@ -42,6 +42,7 @@ test('IA permanece utilizavel sem overflow em desktop e mobile', async ({ page }
     await page.goto('/');
     await page.locator('button:visible').filter({ hasText: /^IA$/ }).click();
     await expect(page.getByRole('heading', { name: 'Assistente de IA' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Base de conhecimento' })).toHaveCount(0);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(1);
     await page.screenshot({ path: `test-results/ai-${viewport.width}.png`, fullPage: true });

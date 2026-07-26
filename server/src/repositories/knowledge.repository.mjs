@@ -21,6 +21,62 @@ export function createKnowledgeRepository(db = database) {
     return camelRow(result.rows[0]);
   }
 
+  async function getDocumentBySourceKey(sourceKey) {
+    const result = await db.query(
+      'SELECT * FROM knowledge_documents WHERE source_key = $1',
+      [sourceKey],
+    );
+    return camelRow(result.rows[0]);
+  }
+
+  async function upsertSourceDocument(input) {
+    const result = await db.query(
+      `INSERT INTO knowledge_documents (
+        id, title, type, original_filename, storage_path, source_key, source_hash, status
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,'processing')
+      ON CONFLICT (source_key) WHERE source_key IS NOT NULL DO UPDATE SET
+        title = EXCLUDED.title,
+        type = EXCLUDED.type,
+        original_filename = EXCLUDED.original_filename,
+        storage_path = EXCLUDED.storage_path,
+        source_hash = EXCLUDED.source_hash,
+        status = CASE
+          WHEN knowledge_documents.source_hash IS DISTINCT FROM EXCLUDED.source_hash
+            OR knowledge_documents.status = 'failed'
+          THEN 'processing'
+          ELSE knowledge_documents.status
+        END,
+        error = CASE
+          WHEN knowledge_documents.source_hash IS DISTINCT FROM EXCLUDED.source_hash
+            OR knowledge_documents.status = 'failed'
+          THEN NULL
+          ELSE knowledge_documents.error
+        END,
+        locked_at = CASE
+          WHEN knowledge_documents.source_hash IS DISTINCT FROM EXCLUDED.source_hash
+          THEN NULL
+          ELSE knowledge_documents.locked_at
+        END,
+        locked_by = CASE
+          WHEN knowledge_documents.source_hash IS DISTINCT FROM EXCLUDED.source_hash
+          THEN NULL
+          ELSE knowledge_documents.locked_by
+        END,
+        updated_at = now()
+      RETURNING *`,
+      [
+        input.id,
+        input.title,
+        input.type,
+        input.originalFilename,
+        input.storagePath,
+        input.sourceKey,
+        input.sourceHash,
+      ],
+    );
+    return camelRow(result.rows[0]);
+  }
+
   async function listDocuments() {
     const result = await db.query('SELECT * FROM knowledge_documents ORDER BY created_at DESC');
     return camelRows(result.rows);
@@ -140,6 +196,8 @@ export function createKnowledgeRepository(db = database) {
   return {
     createDocument,
     getDocument,
+    getDocumentBySourceKey,
+    upsertSourceDocument,
     listDocuments,
     claimNext,
     replaceChunks,

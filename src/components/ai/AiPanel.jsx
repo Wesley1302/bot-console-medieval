@@ -1,26 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  BookOpen, Bot, ExternalLink, FileText, LoaderCircle, Search, Trash2, Upload,
+  Bot, ExternalLink, LoaderCircle, Search,
 } from 'lucide-react';
 import {
   cancelAiQuery, createAiQuery, getAiQueries, getAiQuery,
 } from '../../api/ai.api.js';
-import {
-  deleteKnowledgeDocument,
-  getKnowledgeDocuments,
-  reprocessKnowledgeDocument,
-  uploadKnowledgeDocument,
-} from '../../api/knowledge.api.js';
 import { Button } from '../ui/Button.jsx';
 import { EmptyState } from '../ui/EmptyState.jsx';
 import { Toast } from '../ui/Toast.jsx';
 
 const terminal = new Set(['completed', 'partial', 'failed', 'cancelled']);
-const documentTypes = [
-  ['lore', 'Lore'], ['law', 'Lei'], ['tradition', 'Tradicao'], ['house', 'Casa'],
-  ['character', 'Personagem'], ['server_rule', 'Regra do servidor'], ['reference', 'Referencia'],
-];
-
 function ScopeCheckbox({ area, checked, partial = false, onToggle }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -32,92 +21,6 @@ function ScopeCheckbox({ area, checked, partial = false, onToggle }) {
       <span>{area.name}</span>
       <small>{area.type}</small>
     </label>
-  );
-}
-
-function KnowledgeManager() {
-  const [documents, setDocuments] = useState([]);
-  const [file, setFile] = useState(null);
-  const [title, setTitle] = useState('');
-  const [type, setType] = useState('lore');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  async function refresh() {
-    try {
-      const payload = await getKnowledgeDocuments();
-      setDocuments(payload.documents || []);
-    } catch (requestError) {
-      setError(requestError.message);
-    }
-  }
-
-  useEffect(() => { refresh(); }, []);
-  useEffect(() => {
-    if (!documents.some((document) => document.status === 'processing')) return undefined;
-    const interval = window.setInterval(refresh, 2_000);
-    return () => window.clearInterval(interval);
-  }, [documents]);
-
-  async function upload(event) {
-    event.preventDefault();
-    if (!file) return;
-    setBusy(true);
-    setError('');
-    try {
-      await uploadKnowledgeDocument({ title, type, file });
-      setFile(null);
-      setTitle('');
-      await refresh();
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove(document) {
-    if (!window.confirm(`Excluir o documento "${document.title}"?`)) return;
-    await deleteKnowledgeDocument(document.id);
-    await refresh();
-  }
-
-  return (
-    <section className="ai-knowledge">
-      <div className="section-heading">
-        <div><h3>Base de conhecimento</h3><p>Lore, leis, tradicoes e referencias.</p></div>
-        <BookOpen size={20} />
-      </div>
-      {error && <Toast tone="error">{error}</Toast>}
-      <form className="ai-knowledge__form" onSubmit={upload}>
-        <label className="field"><span>Titulo</span><input value={title} onChange={(event) => setTitle(event.target.value)} /></label>
-        <label className="field"><span>Classificacao</span>
-          <select value={type} onChange={(event) => setType(event.target.value)}>
-            {documentTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-        </label>
-        <label className="field ai-knowledge__file"><span>Arquivo PDF, MD, TXT ou DOCX</span>
-          <input accept=".pdf,.md,.txt,.docx" type="file" onChange={(event) => setFile(event.target.files?.[0] || null)} />
-        </label>
-        <Button disabled={!file || busy} type="submit"><Upload size={16} /> Enviar</Button>
-      </form>
-      <div className="ai-knowledge__list">
-        {documents.map((document) => (
-          <article key={document.id}>
-            <FileText size={18} />
-            <div><strong>{document.title}</strong><small>{document.type} · {document.status}</small></div>
-            {document.status === 'failed' && (
-              <Button className="button--ghost" aria-label="Reprocessar" onClick={async () => {
-                await reprocessKnowledgeDocument(document.id); await refresh();
-              }}><LoaderCircle size={15} /></Button>
-            )}
-            <Button className="button--ghost" aria-label="Excluir documento" onClick={() => remove(document)}>
-              <Trash2 size={15} />
-            </Button>
-          </article>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -300,7 +203,6 @@ export function AiPanel({ channelTree }) {
             </Button>
           )}
         </form>
-        <KnowledgeManager />
       </aside>
       <section className="ai-panel__workspace">
         <ResultPanel query={current} />

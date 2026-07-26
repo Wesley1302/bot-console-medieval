@@ -15,7 +15,29 @@ function parseTrustProxy(value) {
   throw new Error('TRUST_PROXY invalido. Use loopback, um numero de hops ou uma lista CIDR.');
 }
 
+function parseCsv(value) {
+  return String(value || '').split(',').map((entry) => entry.trim()).filter(Boolean);
+}
+
+function parseModelLimits(value) {
+  const limits = {};
+  for (const entry of parseCsv(value)) {
+    const separator = entry.lastIndexOf(':');
+    if (separator < 1) continue;
+    const model = entry.slice(0, separator).trim();
+    const rpm = Number(entry.slice(separator + 1));
+    if (model && Number.isFinite(rpm) && rpm > 0) limits[model] = Math.floor(rpm);
+  }
+  return limits;
+}
+
 export { parseTrustProxy };
+
+const AI_PROVIDER = process.env.AI_PROVIDER || 'openai-compatible';
+const configuredModels = parseCsv(process.env.AI_MODELS);
+const AI_MODELS = configuredModels.length
+  ? configuredModels
+  : parseCsv(process.env.AI_MODEL);
 
 export const env = {
   DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN || '',
@@ -29,12 +51,17 @@ export const env = {
   DATABASE_URL: process.env.DATABASE_URL || '',
   DATABASE_SSL: String(process.env.DATABASE_SSL || '').toLowerCase() === 'true',
   DATABASE_POOL_SIZE: Math.max(1, Number(process.env.DATABASE_POOL_SIZE || 10)),
-  AI_PROVIDER: process.env.AI_PROVIDER || 'openai-compatible',
+  AI_PROVIDER,
   AI_API_KEY: process.env.AI_API_KEY || '',
   AI_BASE_URL: (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, ''),
-  AI_MODEL: process.env.AI_MODEL || '',
+  AI_MODEL: AI_MODELS[0] || '',
+  AI_MODELS,
+  AI_MODEL_RPM_LIMITS: parseModelLimits(process.env.AI_MODEL_RPM_LIMITS),
+  AI_MODEL_COOLDOWN_MS: Math.max(1_000, Number(process.env.AI_MODEL_COOLDOWN_MS || 60_000)),
   EMBEDDING_MODEL: process.env.EMBEDDING_MODEL || '',
+  EMBEDDING_DIMENSIONS: Math.max(128, Number(process.env.EMBEDDING_DIMENSIONS || 768)),
   KNOWLEDGE_STORAGE_PATH: process.env.KNOWLEDGE_STORAGE_PATH || 'server/knowledge',
+  KNOWLEDGE_SOURCE_PATH: process.env.KNOWLEDGE_SOURCE_PATH || '',
   JOB_CONCURRENCY: Math.max(1, Number(process.env.JOB_CONCURRENCY || 2)),
   MESSAGE_SYNC_CONCURRENCY: Math.max(1, Number(process.env.MESSAGE_SYNC_CONCURRENCY || 3)),
   RECONCILIATION_INTERVAL_MINUTES: Math.max(5, Number(process.env.RECONCILIATION_INTERVAL_MINUTES || 60)),
@@ -52,7 +79,7 @@ export function getAdvancedConfigurationStatus() {
   const database = Boolean(env.DATABASE_URL);
   const aiMissing = [
     ['AI_API_KEY', env.AI_API_KEY],
-    ['AI_MODEL', env.AI_MODEL],
+    ['AI_MODELS', env.AI_MODELS.length],
     ['EMBEDDING_MODEL', env.EMBEDDING_MODEL],
   ].filter(([, value]) => !value).map(([name]) => name);
   return {

@@ -248,6 +248,7 @@ export function createAiWorker(dependencies = {}) {
       }
       const result = validateResult(generated.result, queryType, evidence.map((item) => item.id));
       result.usage = generated.usage || null;
+      result.model = generated.model || query.model || env.AI_MODEL;
       result.durationMs = Date.now() - started;
       await deps.repository.complete(
         query.id,
@@ -259,6 +260,7 @@ export function createAiWorker(dependencies = {}) {
         queryType,
         evidenceCount: evidence.length,
         durationMs: result.durationMs,
+        model: result.model,
         totalTokens: generated.usage?.total_tokens || null,
       });
     } catch (error) {

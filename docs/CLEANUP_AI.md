@@ -28,12 +28,17 @@ docker compose -f docker-compose.pgvector.yml up -d
 ```env
 DATABASE_URL=postgresql://bot_console:local-development-only@127.0.0.1:5432/bot_console_medieval
 DATABASE_SSL=false
-AI_PROVIDER=openai-compatible
+AI_PROVIDER=gemini
 AI_API_KEY=
-AI_BASE_URL=https://api.openai.com/v1
-AI_MODEL=
-EMBEDDING_MODEL=
+AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta
+AI_MODEL=gemini-3.5-flash
+AI_MODELS=gemini-3.5-flash,gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite
+AI_MODEL_RPM_LIMITS=gemini-3.5-flash:4,gemini-3.6-flash:4,gemini-3.5-flash-lite:12,gemini-3.1-flash-lite:12
+AI_MODEL_COOLDOWN_MS=60000
+EMBEDDING_MODEL=gemini-embedding-2
+EMBEDDING_DIMENSIONS=768
 KNOWLEDGE_STORAGE_PATH=server/knowledge
+KNOWLEDGE_SOURCE_PATH=
 JOB_CONCURRENCY=2
 MESSAGE_SYNC_CONCURRENCY=3
 RECONCILIATION_INTERVAL_MINUTES=60
@@ -90,12 +95,20 @@ semanticas e narrativas recuperam apenas evidencias relevantes antes da chamada
 ao modelo. A resposta do modelo precisa ser JSON validavel e so pode citar IDs
 de evidencias recuperados.
 
-## Documentos
+## Conhecimento Local
 
-Formatos: PDF, Markdown, TXT e DOCX. Limite: um arquivo de ate 20 MB por upload.
-Classificacoes: lore, lei, tradicao, casa, personagem, regra do servidor e
-referencia. Os arquivos ficam em `KNOWLEDGE_STORAGE_PATH`; chunks e embeddings
-ficam no PostgreSQL.
+O upload manual foi removido do painel. A base e sincronizada a partir da pasta
+configurada em `KNOWLEDGE_SOURCE_PATH`:
+
+```bash
+npm run knowledge:sync -- --dry-run
+npm run knowledge:sync
+```
+
+A sincronizacao aceita Markdown e TXT, e idempotente e so reprocessa arquivos
+alterados. Os arquivos ficam em `KNOWLEDGE_STORAGE_PATH`; chunks e embeddings
+ficam no PostgreSQL. Consulte `docs/GEMINI_KNOWLEDGE.md` para a estrategia de
+modelos, cotas e fallback.
 
 ## Rollback
 
@@ -117,4 +130,4 @@ de conhecimento antes de executar.
 - A estimativa da previa usa o indice local e pode ser menor antes da primeira sincronizacao.
 - Documentos PDF preservam texto, mas a pagina pode ficar indisponivel quando o parser nao fornece mapeamento confiavel.
 - Nao existe painel de metricas agregado; eventos operacionais ficam em logs estruturados e `technical_events`.
-- As novas capacidades ainda exigem configuracao de banco/provedor e validacao real antes de deploy.
+- A sincronizacao real da pasta e a configuracao do provedor devem ser aplicadas em cada ambiente.
