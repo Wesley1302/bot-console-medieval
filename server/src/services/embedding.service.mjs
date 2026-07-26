@@ -7,6 +7,42 @@ const conservativeRpm = {
   'gemini-3.1-flash-lite': 12,
 };
 
+const evidenceItemSchema = {
+  type: 'object',
+  properties: {
+    statement: { type: 'string' },
+    evidenceIds: { type: 'array', items: { type: 'string' } },
+    confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+  },
+  required: ['statement', 'evidenceIds'],
+  additionalProperties: false,
+};
+
+const structuredResponseSchema = {
+  type: 'object',
+  properties: {
+    summary: { type: 'string' },
+    facts: { type: 'array', items: evidenceItemSchema },
+    interpretations: { type: 'array', items: evidenceItemSchema },
+    hypotheses: { type: 'array', items: evidenceItemSchema },
+    recommendations: { type: 'array', items: evidenceItemSchema },
+    affectedHouses: { type: 'array', items: evidenceItemSchema },
+    lawsAndTraditions: { type: 'array', items: evidenceItemSchema },
+    limitations: { type: 'array', items: { type: 'string' } },
+  },
+  required: [
+    'summary',
+    'facts',
+    'interpretations',
+    'hypotheses',
+    'recommendations',
+    'affectedHouses',
+    'lawsAndTraditions',
+    'limitations',
+  ],
+  additionalProperties: false,
+};
+
 function httpError(message, status = 503) {
   const error = new Error(message);
   error.status = status;
@@ -153,7 +189,10 @@ export function createGeminiClient(options = {}) {
           const payload = await request(model, 'generateContent', {
             systemInstruction: { parts: [{ text: system }] },
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: 'application/json' },
+            generationConfig: {
+              responseMimeType: 'application/json',
+              responseJsonSchema: structuredResponseSchema,
+            },
           });
           const content = geminiText(payload);
           if (!content) throw httpError('O provedor de IA retornou resposta vazia.', 502);

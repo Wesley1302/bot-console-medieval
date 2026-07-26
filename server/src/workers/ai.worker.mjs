@@ -239,6 +239,8 @@ export function createAiWorker(dependencies = {}) {
         'Use apenas as evidencias fornecidas. Separe fatos, interpretacoes, hipoteses e recomendacoes.',
         'Nao invente personagens, casas, leis, mensagens ou links.',
         'Todo item deve referenciar apenas IDs de evidencias existentes.',
+        'Preencha summary e as listas facts, interpretations, hypotheses, recommendations, affectedHouses, lawsAndTraditions e limitations.',
+        'Cada item das listas analiticas deve ter statement, evidenceIds e confidence high, medium ou low.',
       ].join(' ');
       const request = boundedContext(query.prompt, queryType, evidence, contextLimit);
       const generated = await deps.generate(system, request);

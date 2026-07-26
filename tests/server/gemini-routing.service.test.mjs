@@ -39,6 +39,29 @@ test('Gemini troca de modelo quando o primeiro retorna 429', async () => {
   assert.equal(calls.length, 2);
 });
 
+test('Gemini solicita resposta no contrato estruturado do worker', async () => {
+  let requestBody;
+  const client = createGeminiClient({
+    apiKey: 'test-key',
+    baseUrl: 'https://example.test',
+    models: ['quality'],
+    limits: { quality: 4 },
+    fetchImpl: async (_url, options) => {
+      requestBody = JSON.parse(options.body);
+      return success('structured');
+    },
+  });
+
+  await client.generate('system', 'prompt');
+
+  const schema = requestBody.generationConfig.responseJsonSchema;
+  assert.equal(requestBody.generationConfig.responseMimeType, 'application/json');
+  assert.equal(schema.type, 'object');
+  assert.ok(schema.required.includes('summary'));
+  assert.ok(schema.required.includes('limitations'));
+  assert.deepEqual(schema.properties.facts.items.required, ['statement', 'evidenceIds']);
+});
+
 test('Gemini respeita o limite local e usa o proximo modelo', async () => {
   const calls = [];
   let currentTime = 10_000;
