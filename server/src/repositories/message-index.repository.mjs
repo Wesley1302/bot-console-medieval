@@ -165,10 +165,22 @@ export function createMessageIndexRepository(db = database) {
 
   async function searchText({ guildId, channelIds, query, dateFrom, dateTo, authorId, limit }) {
     const result = await db.query(
-      `SELECT *, ts_rank(to_tsvector('simple', content), plainto_tsquery('simple', $3)) AS relevance_score
-       FROM indexed_messages
+      `WITH search_queries AS (
+         SELECT
+           plainto_tsquery('simple', $3) AS exact_query,
+           to_tsquery(
+             'simple',
+             replace(plainto_tsquery('simple', $3)::text, ' & ', ' | ')
+           ) AS broad_query
+       )
+       SELECT indexed_messages.*,
+         CASE WHEN $3 = '' THEN 0
+           ELSE ts_rank(to_tsvector('simple', content), exact_query)
+             + ts_rank(to_tsvector('simple', content), broad_query)
+         END AS relevance_score
+       FROM indexed_messages CROSS JOIN search_queries
        WHERE guild_id = $1 AND channel_id = ANY($2::text[])
-         AND ($3 = '' OR to_tsvector('simple', content) @@ plainto_tsquery('simple', $3))
+         AND ($3 = '' OR to_tsvector('simple', content) @@ broad_query)
          AND ($4::timestamptz IS NULL OR created_at >= $4)
          AND ($5::timestamptz IS NULL OR created_at <= $5)
          AND ($6::text IS NULL OR author_id = $6)

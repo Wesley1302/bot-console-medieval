@@ -13,6 +13,21 @@ const responseArrays = [
   'affectedHouses', 'lawsAndTraditions', 'limitations',
 ];
 
+const searchStopWords = new Set([
+  'a', 'ao', 'aos', 'as', 'com', 'como', 'da', 'das', 'de', 'do', 'dos',
+  'e', 'em', 'esta', 'estao', 'fazer', 'feito', 'foi', 'foram', 'isso', 'me',
+  'na', 'nas', 'no', 'nos',
+  'o', 'os', 'por', 'porque', 'qual', 'quais', 'que', 'quem', 'se', 'sem',
+  'ser', 'sobre', 'ter', 'teve', 'um', 'uma',
+]);
+
+function searchTerms(prompt) {
+  const terms = String(prompt || '').toLowerCase().match(/[\p{L}\p{N}_-]+/gu) || [];
+  return [...new Set(terms.filter((term) => (
+    term.length >= 3 && !searchStopWords.has(term)
+  )))].slice(0, 12).join(' ');
+}
+
 function classify(prompt) {
   const text = String(prompt).toLowerCase();
   if (/ultima|última|quando|data|mensagens? de|enviou/.test(text)) return 'factual';
@@ -155,14 +170,18 @@ export function createAiWorker(dependencies = {}) {
         });
         if (latest) messageRows = [latest];
       } else {
-        const textRows = await deps.messages.searchText({
+        const textSearchInput = {
           guildId: deps.guildId,
           channelIds,
-          query: query.prompt,
+          query: searchTerms(query.prompt),
           dateFrom: query.dateFrom,
           dateTo: query.dateTo,
           limit: env.AI_MAX_EVIDENCES,
-        });
+        };
+        let textRows = await deps.messages.searchText(textSearchInput);
+        if (!textRows.length) {
+          textRows = await deps.messages.searchText({ ...textSearchInput, query: '' });
+        }
         let semanticRows = [];
         if (env.EMBEDDING_MODEL) {
           const [embedding] = await deps.embed([query.prompt]).catch(() => []);
@@ -282,7 +301,7 @@ export function createAiWorker(dependencies = {}) {
     return true;
   }
 
-  return { processNext, classify, validateResult };
+  return { processNext, classify, searchTerms, validateResult };
 }
 
 export const aiWorker = createAiWorker();

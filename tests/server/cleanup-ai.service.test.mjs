@@ -409,6 +409,10 @@ test('validacao de IA cobre escopo, periodo e classificacao', () => {
   assert.equal(worker.classify('Quando foi a ultima mensagem do usuario 123?'), 'factual');
   assert.equal(worker.classify('Analise o impacto nas casas e leis'), 'narrative');
   assert.equal(worker.classify('Cenas sobre traicao'), 'semantic');
+  assert.equal(
+    worker.searchTerms('Qual o motivo de a ADM Quack ter feito isso?'),
+    'motivo adm quack',
+  );
 });
 
 test('chunking documental preserva sobreposicao controlada sem chunks vazios', () => {
