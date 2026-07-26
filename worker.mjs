@@ -6,6 +6,7 @@ import { aiWorker } from './server/src/workers/ai.worker.mjs';
 import { knowledgeWorker } from './server/src/workers/knowledge.worker.mjs';
 import { discordGatewayService } from './server/src/services/discord-gateway.service.mjs';
 import { reconciliationService } from './server/src/services/reconciliation.service.mjs';
+import { createWorkerRuntime } from './server/src/workers/worker-runtime.mjs';
 import { logger } from './server/src/utils/logger.mjs';
 
 if (!database.isConfigured()) {
@@ -14,35 +15,20 @@ if (!database.isConfigured()) {
 }
 
 let stopping = false;
-let lastReconciliation = 0;
-
-async function tick() {
-  if (stopping) return;
-  try {
-    const [cleanup, ai, knowledge] = await Promise.all([
-      cleanupWorker.processOnce(),
-      aiWorker.processNext(),
-      knowledgeWorker.processNext(),
-    ]);
-    const reconciliationInterval = env.RECONCILIATION_INTERVAL_MINUTES * 60_000;
-    if (Date.now() - lastReconciliation >= reconciliationInterval) {
-      lastReconciliation = Date.now();
-      const result = await reconciliationService.run(100);
-      logger.info('reconciliation_completed', result);
-    }
-    if (!cleanup && !ai && !knowledge) {
-      await new Promise((resolve) => setTimeout(resolve, env.WORKER_POLL_INTERVAL_MS));
-    }
-  } catch (error) {
-    logger.error('worker_tick_failed', { status: error.status || 500, message: error.message });
-    await new Promise((resolve) => setTimeout(resolve, env.WORKER_POLL_INTERVAL_MS * 2));
-  }
-  setImmediate(tick);
-}
+const runtime = createWorkerRuntime({
+  cleanup: () => cleanupWorker.processOnce(),
+  ai: () => aiWorker.processNext(),
+  knowledge: () => knowledgeWorker.processNext(),
+  reconciliation: () => reconciliationService.run(100),
+  pollIntervalMs: env.WORKER_POLL_INTERVAL_MS,
+  reconciliationIntervalMs: env.RECONCILIATION_INTERVAL_MINUTES * 60_000,
+  logger,
+});
 
 async function shutdown(signal) {
   if (stopping) return;
   stopping = true;
+  runtime.stop();
   logger.info('worker_stopping', { signal });
   discordGatewayService.stop();
   await database.close();
@@ -58,4 +44,4 @@ process.on('uncaughtException', (error) => {
 
 discordGatewayService.start();
 logger.info('persistent_worker_started', { concurrency: env.JOB_CONCURRENCY });
-tick();
+runtime.start();
