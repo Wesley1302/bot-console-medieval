@@ -64,7 +64,9 @@ export function createMessageSyncService(dependencies = {}) {
         inPeriod(message.timestamp, options.dateFrom, options.dateTo)
       ));
       if (deps.index.indexMessages) {
-        await deps.index.indexMessages(messagesInPeriod);
+        await deps.index.indexMessages(messagesInPeriod, {
+          embed: options.embedMessages !== false,
+        });
       } else {
         for (const message of messagesInPeriod) await deps.index.indexMessage(message);
       }

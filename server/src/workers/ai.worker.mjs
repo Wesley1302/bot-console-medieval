@@ -129,6 +129,7 @@ export function createAiWorker(dependencies = {}) {
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
         maxPages: deps.syncMaxPages,
+        embedMessages: false,
         onPageComplete: () => deps.repository.heartbeat(query.id, deps.workerId),
         onAreaComplete: () => deps.repository.heartbeat(query.id, deps.workerId),
       });

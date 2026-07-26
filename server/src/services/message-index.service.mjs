@@ -40,13 +40,16 @@ export function createMessageIndexService(dependencies = {}) {
     };
   }
 
-  async function indexMessages(messages) {
+  async function indexMessages(messages, options = {}) {
     const list = Array.isArray(messages) ? messages : [];
     if (!list.length) return [];
 
     const contents = list.map((message) => String(message.content || ''));
+    const shouldEmbed = options.embed !== false;
     const embeddableIndexes = contents
-      .map((content, index) => (content.trim() && deps.embeddingModel ? index : -1))
+      .map((content, index) => (
+        shouldEmbed && content.trim() && deps.embeddingModel ? index : -1
+      ))
       .filter((index) => index >= 0);
     let embeddings = [];
     let embeddingFailed = false;
@@ -70,7 +73,7 @@ export function createMessageIndexService(dependencies = {}) {
       const embedding = embeddingByIndex.get(index) || null;
       const embeddingStatus = !contents[index].trim() || !deps.embeddingModel
         ? 'skipped'
-        : (embedding ? 'ready' : 'failed');
+        : (!shouldEmbed ? 'pending' : (embedding ? 'ready' : 'failed'));
       return normalizeMessage(message, embedding, embeddingStatus);
     });
     await Promise.all(normalized.map((message) => deps.repository.upsertMessage(message)));

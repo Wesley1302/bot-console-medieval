@@ -322,6 +322,33 @@ test('message index gera embeddings em lote para uma pagina inteira', async () =
   assert.equal(indexed[2].embeddingStatus, 'skipped');
 });
 
+test('message index permite sincronizacao rapida sem gerar embeddings', async () => {
+  let embedCalled = false;
+  const saved = [];
+  const service = createMessageIndexService({
+    guildId: 'guild-1',
+    embeddingModel: 'embed-test',
+    embed: async () => {
+      embedCalled = true;
+      return [];
+    },
+    repository: {
+      upsertMessage: async (message) => saved.push(message),
+      deleteMessages: async () => {},
+    },
+  });
+
+  const indexed = await service.indexMessages([{
+    id: 'message-1', channelId: 'channel-1',
+    author: { id: 'user-1', displayName: 'Membro' },
+    content: 'mensagem pesquisavel', timestamp: '2026-07-25T12:00:00Z',
+  }], { embed: false });
+
+  assert.equal(embedCalled, false);
+  assert.equal(indexed[0].embeddingStatus, 'pending');
+  assert.equal(saved[0].content, 'mensagem pesquisavel');
+});
+
 test('sincronizacao limita paginas, usa lote e renova heartbeat por pagina', async () => {
   const batches = [];
   const heartbeats = [];

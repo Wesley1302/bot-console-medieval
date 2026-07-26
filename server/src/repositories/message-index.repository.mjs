@@ -73,8 +73,24 @@ export function createMessageIndexRepository(db = database) {
         message_url = EXCLUDED.message_url,
         attachments_json = EXCLUDED.attachments_json,
         source_hash = EXCLUDED.source_hash, indexed_at = now(),
-        embedding_status = EXCLUDED.embedding_status,
-        embedding = EXCLUDED.embedding, embedding_model = EXCLUDED.embedding_model`,
+        embedding_status = CASE
+          WHEN EXCLUDED.embedding_status = 'pending'
+            AND indexed_messages.source_hash = EXCLUDED.source_hash
+          THEN indexed_messages.embedding_status
+          ELSE EXCLUDED.embedding_status
+        END,
+        embedding = CASE
+          WHEN EXCLUDED.embedding_status = 'pending'
+            AND indexed_messages.source_hash = EXCLUDED.source_hash
+          THEN indexed_messages.embedding
+          ELSE EXCLUDED.embedding
+        END,
+        embedding_model = CASE
+          WHEN EXCLUDED.embedding_status = 'pending'
+            AND indexed_messages.source_hash = EXCLUDED.source_hash
+          THEN indexed_messages.embedding_model
+          ELSE EXCLUDED.embedding_model
+        END`,
       [
         message.id,
         message.guildId,
