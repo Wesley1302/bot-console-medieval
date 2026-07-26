@@ -95,3 +95,15 @@ incrementais.
 - Alias `https://bot-console-medieval.vercel.app` preservado.
 - Health, login, cookie seguro, sessao, status real e canais reais aprovados
   ponta a ponta.
+
+## Gemini E Base Local - 26/07/2026
+
+- Painel de upload manual da base removido.
+- Base privada local sincronizada sem entrar no Git.
+- 21 documentos e 47 chunks prontos na Oracle.
+- Fallback Gemini, fila, cooldown e JSON estruturado validados.
+- Embeddings normalizados em 768 dimensoes.
+- Consulta RAG real concluida com evidencias privadas.
+- Release Oracle `/opt/bot-console-medieval/releases/20260726063136`.
+- Frontend preservado em `https://bot-console-medieval.vercel.app`.
+- Status: **PRODUCAO VALIDADA COM IA GEMINI.**

@@ -166,5 +166,25 @@ mas embeddings e respostas generativas nao devem ser considerados ativos.
 Pendencias operacionais:
 
 1. configurar backup automatizado e testar restauracao do PostgreSQL;
-2. configurar o provedor de IA sem registrar segredos;
-3. validar limpeza destrutiva apenas em canal exclusivo de QA.
+2. validar limpeza destrutiva apenas em canal exclusivo de QA.
+
+## Gemini E Base Local Em Producao
+
+Estado em 26/07/2026:
+
+- release Oracle: `/opt/bot-console-medieval/releases/20260726063136`;
+- backend e worker online no PM2;
+- cadeia Gemini com fila, cooldown, retry e fallback ativa;
+- `gemini-embedding-2` configurado para 768 dimensoes;
+- 21 documentos privados sincronizados e 47 chunks prontos;
+- consulta RAG real aprovada pelo alias Vercel;
+- credencial e documentos privados ausentes do Git.
+
+Para atualizar a base privada, copie os documentos para o diretorio persistente
+da Oracle e execute no release atual:
+
+```bash
+npm run knowledge:sync
+```
+
+O relatorio completo esta em `GEMINI_DEPLOY_REPORT.md`.

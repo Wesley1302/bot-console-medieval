@@ -596,3 +596,27 @@ Rodada executada em 2026-06-24:
 ## Status
 
 **PRODUCAO VALIDADA. Prontidao estimada: 99%.**
+
+---
+
+# Validacao Gemini E Base Local
+
+## Data/Hora
+
+26/07/2026, America/Sao_Paulo.
+
+## Resultado
+
+- Upload manual de conhecimento removido da interface.
+- Sincronizacao idempotente de diretorio privado implementada.
+- 21 documentos e 47 chunks prontos, sem erros.
+- Fallback Gemini medido e validado com chamadas reais.
+- Embeddings estabilizados em 768 dimensoes.
+- Vetores legados normalizados e busca protegida contra dimensoes divergentes.
+- Worker PM2 recriado na release atual.
+- Consulta RAG real concluida com 10 evidencias privadas.
+- GitHub, Oracle e Vercel atualizados sem versionar segredo ou conteudo privado.
+
+## Status
+
+**INTEGRACAO GEMINI VALIDADA EM PRODUCAO.**

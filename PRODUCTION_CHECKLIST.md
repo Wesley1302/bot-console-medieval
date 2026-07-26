@@ -49,10 +49,12 @@
 - [x] Subir `bot-console-medieval-worker` no PM2.
 - [x] Validar inicializacao do Gateway e reconciliacao.
 - [x] Publicar e validar as novas rotas e o frontend pelo alias Vercel.
+- [x] Configurar credencial e cadeia de fallback Gemini sem expor segredo.
+- [x] Sincronizar a base local privada: 21 documentos e 47 chunks prontos.
+- [x] Validar embeddings `gemini-embedding-2` com 768 dimensoes.
+- [x] Validar consulta generativa real com evidencias da base privada.
 - [ ] Configurar backup automatizado e testar restauracao do PostgreSQL.
-- [ ] Configurar credencial e modelos do provedor de IA.
-- [ ] Validar consulta factual, semantica e narrativa com evidencias.
 - [ ] Validar limpeza em canal exclusivo de QA com confirmacao e rollback operacional.
 
-**Infraestrutura, limpeza e jobs persistentes estao ativos. A IA generativa
-permanece desativada ate a configuracao e validacao do provedor.**
+**Infraestrutura, jobs persistentes, base local e IA generativa estao ativos e
+validados em producao.**
