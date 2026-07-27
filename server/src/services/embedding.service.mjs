@@ -188,8 +188,9 @@ export function createGeminiClient(options = {}) {
     throw error;
   }
 
-  async function generate(system, prompt) {
+  async function generate(system, prompt, options = {}) {
     if (!apiKey || !models.length) assertAiConfig();
+    const maxOutputTokens = Number(options.maxOutputTokens) || 8_192;
     let lastError = null;
     for (let cycle = 0; cycle < 3; cycle += 1) {
       let shortestDelay = Infinity;
@@ -208,7 +209,7 @@ export function createGeminiClient(options = {}) {
             generationConfig: {
               responseMimeType: 'application/json',
               responseJsonSchema: structuredResponseSchema,
-              maxOutputTokens: 8_192,
+              maxOutputTokens,
             },
           });
           const content = geminiText(payload);
@@ -345,11 +346,12 @@ export async function embedTexts(texts) {
     .map((item) => item.embedding);
 }
 
-export async function generateStructuredResponse(system, prompt) {
-  if (env.AI_PROVIDER === 'gemini') return geminiClient.generate(system, prompt);
+export async function generateStructuredResponse(system, prompt, options = {}) {
+  if (env.AI_PROVIDER === 'gemini') return geminiClient.generate(system, prompt, options);
   const payload = await openAiCompatibleRequest('/chat/completions', {
     model: env.AI_MODEL,
     temperature: 0.1,
+    max_tokens: Number(options.maxOutputTokens) || 8_192,
     response_format: { type: 'json_object' },
     messages: [
       { role: 'system', content: system },

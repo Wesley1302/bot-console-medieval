@@ -69,6 +69,24 @@ test('Gemini solicita resposta no contrato estruturado do worker', async () => {
   );
 });
 
+test('Gemini aceita ampliar o orcamento somente para respostas detalhadas', async () => {
+  let requestBody;
+  const client = createGeminiClient({
+    apiKey: 'test-key',
+    baseUrl: 'https://example.test',
+    models: ['quality'],
+    limits: { quality: 4 },
+    fetchImpl: async (_url, options) => {
+      requestBody = JSON.parse(options.body);
+      return success('detailed');
+    },
+  });
+
+  await client.generate('system', 'prompt', { maxOutputTokens: 16_384 });
+
+  assert.equal(requestBody.generationConfig.maxOutputTokens, 16_384);
+});
+
 test('Gemini configura e valida a dimensao dos embeddings em lote', async () => {
   let requestBody;
   const client = createGeminiClient({

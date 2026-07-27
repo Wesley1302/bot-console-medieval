@@ -13,6 +13,11 @@ const responseArrays = [
   'affectedHouses', 'lawsAndTraditions', 'limitations',
 ];
 const responseDepths = new Set(['summary', 'standard', 'detailed']);
+const outputTokenLimits = {
+  summary: 4_096,
+  standard: 8_192,
+  detailed: 16_384,
+};
 
 const searchStopWords = new Set([
   'a', 'ao', 'aos', 'as', 'com', 'como', 'da', 'das', 'de', 'do', 'dos',
@@ -357,7 +362,9 @@ export function createAiWorker(dependencies = {}) {
       const request = boundedContext(
         query.prompt, queryType, answerDepth, evidence, contextLimit,
       );
-      const generated = await deps.generate(system, request);
+      const generated = await deps.generate(system, request, {
+        maxOutputTokens: outputTokenLimits[answerDepth],
+      });
       if (await cancelled(query.id)) {
         await deps.repository.finishCancelled(query.id);
         return true;
