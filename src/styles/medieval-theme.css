@@ -1423,6 +1423,43 @@ textarea {
   gap: 12px;
 }
 
+.ai-output-modes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 3px;
+  border: var(--border-muted);
+  border-radius: var(--radius-md);
+  background: var(--surface-field);
+}
+
+.ai-output-modes button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 38px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.ai-output-modes button:hover {
+  color: var(--color-text);
+  background: var(--surface-raised);
+}
+
+.ai-output-modes button[aria-pressed="true"] {
+  color: var(--color-parchment);
+  background: oklch(25% 0.045 50 / 78%);
+  box-shadow: inset 0 0 0 1px oklch(65% 0.12 70 / 48%);
+}
+
 .ai-scope {
   display: grid;
   gap: 4px;
@@ -1565,6 +1602,56 @@ textarea {
   color: var(--color-text);
   line-height: 1.75;
   white-space: pre-line;
+}
+
+.ai-result__document {
+  gap: 14px !important;
+  padding: 16px;
+  border: var(--border-muted);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+}
+
+.ai-result__document-header {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ai-result__document-header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.ai-result__document-header button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid oklch(58% 0.09 70 / 45%);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--color-parchment);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.ai-result__document pre {
+  max-width: 100%;
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  border: var(--border-muted);
+  border-radius: var(--radius-sm);
+  background: var(--surface-field);
+  color: var(--color-text);
+  font: inherit;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .ai-result__data {
@@ -1716,6 +1803,20 @@ textarea {
 }
 
 @media (max-width: 520px) {
+  .ai-output-modes button {
+    gap: 4px;
+    padding-inline: 4px;
+    font-size: 0.7rem;
+  }
+
+  .ai-result__document {
+    padding: 12px;
+  }
+
+  .ai-result__document-header {
+    align-items: flex-start;
+  }
+
   .cleanup-summary {
     grid-template-columns: 1fr;
   }

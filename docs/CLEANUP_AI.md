@@ -91,16 +91,28 @@ inteiro.
 
 Na aba `IA`:
 
-1. Selecione um ou mais locais.
-2. Escolha todo o historico, desde, ate ou intervalo.
-3. Escreva a pergunta.
-4. Acompanhe resolucao, sincronizacao, busca e analise.
-5. Revise resposta e evidencias.
+1. Escolha `Analisar`, `Comunicado` ou `Narracao`.
+2. Selecione um ou mais locais.
+3. Escolha todo o historico, desde, ate ou intervalo.
+4. Escreva a pergunta ou as orientacoes de redacao.
+5. Acompanhe resolucao, sincronizacao, busca e analise.
+6. Revise a resposta, os dados e as evidencias.
 
 Perguntas factuais com ID de usuario usam consulta estruturada. Consultas
 semanticas e narrativas recuperam apenas evidencias relevantes antes da chamada
 ao modelo. A resposta do modelo precisa ser JSON validavel e so pode citar IDs
 de evidencias recuperados.
+
+O modo `Comunicado` produz Markdown pronto para Discord e pode estruturar
+titulos, citacoes, listas, cronogramas e avisos quando essas informacoes foram
+fornecidas. O modo `Narracao` transforma as cenas recuperadas em um texto coeso,
+preservando a ordem dos fatos e distinguindo acontecimentos confirmados de
+rumores. Os dois modos preservam mencoes Discord existentes, mas nao inventam
+IDs, datas, dialogos ou resultados.
+
+O texto final fica no campo `content` do resultado e pode ser copiado no painel.
+Fatos, interpretacoes, limitacoes e evidencias permanecem abaixo para revisao.
+O painel nao envia o texto gerado automaticamente ao Discord.
 
 ## Conhecimento Local
 

@@ -56,7 +56,22 @@ const completedAiQuery = {
   }],
 };
 
-async function mockApi(page, { withAiResult = false } = {}) {
+const completedAnnouncementQuery = {
+  ...completedAiQuery,
+  id: 'query-announcement',
+  prompt: 'Crie um comunicado detalhado sobre a nova regra',
+  outputMode: 'announcement',
+  resultJson: {
+    ...completedAiQuery.resultJson,
+    outputMode: 'announcement',
+    title: 'Aviso importante',
+    summary: 'Comunicado administrativo preparado com base nas fontes.',
+    content: '# Aviso importante\n\nRevise seus envios antes de publicar.\n\n> A regra vale para todos.',
+    sections: [],
+  },
+};
+
+async function mockApi(page, { query = null } = {}) {
   await page.route('**/*', async (route) => {
     const url = new URL(route.request().url());
     if (!url.pathname.startsWith('/api/')) return route.continue();
@@ -67,10 +82,10 @@ async function mockApi(page, { withAiResult = false } = {}) {
     else if (url.pathname.includes('/messages')) body = { channelId: 'channel', messages: [], hasMore: false };
     else if (url.pathname.endsWith('/automations')) body = { automations: [] };
     else if (url.pathname.endsWith('/exports')) body = { exports: [] };
-    else if (url.pathname.endsWith('/ai/queries/query-completed')) {
-      body = { query: completedAiQuery };
+    else if (query && url.pathname.endsWith(`/ai/queries/${query.id}`)) {
+      body = { query };
     } else if (url.pathname.endsWith('/ai/queries')) {
-      body = { queries: withAiResult ? [completedAiQuery] : [] };
+      body = { queries: query ? [query] : [] };
     }
     else if (url.pathname.endsWith('/knowledge/documents')) body = { documents: [] };
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
@@ -108,7 +123,7 @@ test('IA permanece utilizavel sem overflow em desktop e mobile', async ({ page }
 });
 
 test('IA apresenta explicacao detalhada antes dos dados em desktop e mobile', async ({ page }) => {
-  await mockApi(page, { withAiResult: true });
+  await mockApi(page, { query: completedAiQuery });
   for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 1024 }]) {
     await page.setViewportSize(viewport);
     await page.goto('/');
@@ -120,5 +135,22 @@ test('IA apresenta explicacao detalhada antes dos dados em desktop e mobile', as
     await expect(page.getByText('Alta confianca')).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(1);
+  }
+});
+
+test('IA apresenta comunicado copiavel antes dos dados em desktop e mobile', async ({ page }) => {
+  await mockApi(page, { query: completedAnnouncementQuery });
+  for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 1024 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+    await page.locator('button:visible').filter({ hasText: /^IA$/ }).click();
+    await page.getByRole('button', { name: /Crie um comunicado detalhado/ }).click();
+    await expect(page.getByRole('heading', { name: 'Aviso importante' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Texto pronto para Discord' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Copiar texto final' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dados usados' })).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+    await page.screenshot({ path: `test-results/ai-announcement-${viewport.width}.png`, fullPage: true });
   }
 });

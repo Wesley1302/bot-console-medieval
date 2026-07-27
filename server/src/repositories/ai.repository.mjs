@@ -5,14 +5,15 @@ export function createAiRepository(db = database) {
   async function createQuery(input) {
     const result = await db.query(
       `INSERT INTO ai_queries (
-        id, guild_id, prompt, date_mode, date_from, date_to, status,
+        id, guild_id, prompt, output_mode, date_mode, date_from, date_to, status,
         model, selected_targets_json, progress, step
-      ) VALUES ($1,$2,$3,$4,$5,$6,'queued',$7,$8,0,'Na fila')
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',$8,$9,0,'Na fila')
       RETURNING *`,
       [
         input.id,
         input.guildId,
         input.prompt,
+        input.outputMode || 'analysis',
         input.dateMode,
         input.dateFrom || null,
         input.dateTo || null,

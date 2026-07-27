@@ -5,6 +5,7 @@ import { logger } from '../utils/logger.mjs';
 
 const dateModes = new Set(['all', 'since', 'until', 'range']);
 const targetTypes = new Set(['category', 'text', 'announcement', 'forum', 'thread']);
+const outputModes = new Set(['analysis', 'announcement', 'narration']);
 const terminalStatuses = new Set(['completed', 'partial', 'failed', 'cancelled']);
 
 function httpError(message, status = 400) {
@@ -30,10 +31,12 @@ export function validateQueryInput(input) {
   const prompt = String(input?.prompt || '').trim();
   const selectedTargets = Array.isArray(input?.selectedTargets) ? input.selectedTargets : [];
   const dateMode = String(input?.dateMode || 'all');
-  if (!prompt) throw httpError('Escreva uma pergunta para a IA.');
+  const outputMode = String(input?.outputMode || 'analysis');
+  if (!prompt) throw httpError('Escreva uma pergunta ou orientacao para a IA.');
   if (prompt.length > 12_000) throw httpError('A pergunta deve ter no maximo 12.000 caracteres.');
   if (!selectedTargets.length) throw httpError('Selecione ao menos um local do servidor.');
   if (!dateModes.has(dateMode)) throw httpError('Periodo invalido.');
+  if (!outputModes.has(outputMode)) throw httpError('Tipo de saida invalido.');
   if (['since', 'range'].includes(dateMode) && !validDate(input.dateFrom)) {
     throw httpError('Informe a data inicial.');
   }
@@ -53,6 +56,7 @@ export function validateQueryInput(input) {
   }
   return {
     prompt,
+    outputMode,
     selectedTargets: normalizedTargets,
     dateMode,
     dateFrom: ['since', 'range'].includes(dateMode) ? new Date(input.dateFrom) : null,

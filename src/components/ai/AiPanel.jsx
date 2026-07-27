@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Bot, ExternalLink, LoaderCircle, Search,
+  Bot, Check, Clipboard, ExternalLink, Feather, FileText, LoaderCircle, Search,
 } from 'lucide-react';
 import {
   cancelAiQuery, createAiQuery, getAiQueries, getAiQuery,
@@ -19,6 +19,28 @@ const depthLabels = {
   summary: 'Resposta resumida',
   standard: 'Resposta completa',
   detailed: 'Resposta detalhada',
+};
+const outputModeLabels = {
+  analysis: 'Analise',
+  announcement: 'Comunicado',
+  narration: 'Narracao',
+};
+const modeCopy = {
+  analysis: {
+    field: 'Pergunta',
+    placeholder: 'O que deseja encontrar ou analisar?',
+    action: 'Consultar',
+  },
+  announcement: {
+    field: 'Orientacoes do comunicado',
+    placeholder: 'Descreva o objetivo, o tom, as regras, datas e mencoes que devem aparecer.',
+    action: 'Gerar comunicado',
+  },
+  narration: {
+    field: 'Orientacoes da narracao',
+    placeholder: 'Explique o acontecimento que deve ser narrado e o nivel de detalhe desejado.',
+    action: 'Gerar narracao',
+  },
 };
 const confidenceLabels = {
   high: 'Alta confianca',
@@ -41,7 +63,9 @@ function ScopeCheckbox({ area, checked, partial = false, onToggle }) {
 }
 
 function ResultPanel({ query }) {
+  const [copyState, setCopyState] = useState('idle');
   const result = query?.resultJson;
+  useEffect(() => setCopyState('idle'), [query?.id]);
   if (!query) return <EmptyState title="Nenhuma consulta selecionada" description="Envie uma pergunta ou abra o historico." />;
   if (!terminal.has(query.status)) {
     return (
@@ -54,6 +78,8 @@ function ResultPanel({ query }) {
   }
   if (query.status === 'failed') return <Toast tone="error">{query.error || 'A consulta falhou.'}</Toast>;
   if (!result) return <EmptyState title="Consulta sem resposta" description="Nao ha resultado disponivel." />;
+  const outputMode = result.outputMode || query.outputMode || 'analysis';
+  const isWritingMode = outputMode !== 'analysis';
   const analysisGroups = [
     ['Fatos', result.facts],
     ['Interpretacoes', result.interpretations],
@@ -63,17 +89,44 @@ function ResultPanel({ query }) {
     ['Leis e tradicoes', result.lawsAndTraditions],
   ].filter(([, items]) => Boolean(items?.length));
   const hasAnalysisData = analysisGroups.length > 0 || result.limitations?.length > 0;
+  async function copyContent() {
+    try {
+      await navigator.clipboard.writeText(result.content || '');
+      setCopyState('copied');
+    } catch {
+      setCopyState('error');
+    }
+  }
   return (
     <div className="ai-result">
       <header className="ai-result__header">
         <div className="ai-result__labels">
-          <span>{answerTypeLabels[result.answerType] || result.answerType || 'Analise'}</span>
+          <span>{outputModeLabels[outputMode] || 'Analise'}</span>
+          {!isWritingMode && (
+            <span>{answerTypeLabels[result.answerType] || result.answerType || 'Analise'}</span>
+          )}
           <span>{depthLabels[result.responseDepth] || 'Resposta completa'}</span>
         </div>
         <h2>{result.title || 'Resposta da IA'}</h2>
         <p className="ai-result__summary">{result.summary}</p>
       </header>
-      {result.sections?.length > 0 && (
+      {isWritingMode && result.content && (
+        <section className="ai-result__document" aria-label="Texto final">
+          <div className="ai-result__document-header">
+            <div>
+              <h3>Texto pronto para Discord</h3>
+              <small>Revise antes de publicar.</small>
+            </div>
+            <button type="button" onClick={copyContent} aria-label="Copiar texto final">
+              {copyState === 'copied' ? <Check size={16} /> : <Clipboard size={16} />}
+              {copyState === 'copied' ? 'Copiado' : 'Copiar'}
+            </button>
+          </div>
+          <pre>{result.content}</pre>
+          {copyState === 'error' && <small role="alert">Nao foi possivel copiar o texto.</small>}
+        </section>
+      )}
+      {!isWritingMode && result.sections?.length > 0 && (
         <section className="ai-result__narrative" aria-label="Explicacao">
           {result.sections.map((section, index) => (
             <article key={`${section.heading}-${index}`}>
@@ -86,7 +139,7 @@ function ResultPanel({ query }) {
       {hasAnalysisData && (
         <section className="ai-result__data" aria-label="Dados da analise">
           <div className="ai-result__section-heading">
-            <h2>Dados da analise</h2>
+            <h2>{isWritingMode ? 'Dados usados' : 'Dados da analise'}</h2>
             <p>Fatos e inferencias extraidos das fontes selecionadas.</p>
           </div>
           {analysisGroups.map(([title, items]) => (
@@ -130,6 +183,7 @@ function ResultPanel({ query }) {
 }
 
 export function AiPanel({ channelTree }) {
+  const [outputMode, setOutputMode] = useState('analysis');
   const [selected, setSelected] = useState(() => new Map());
   const [dateMode, setDateMode] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
@@ -184,7 +238,7 @@ export function AiPanel({ channelTree }) {
     setError('');
     try {
       const created = await createAiQuery({
-        prompt, selectedTargets, dateMode,
+        prompt, outputMode, selectedTargets, dateMode,
         dateFrom: dateFrom || null, dateTo: dateTo || null,
       });
       const payload = await getAiQuery(created.queryId);
@@ -212,6 +266,17 @@ export function AiPanel({ channelTree }) {
         <div className="section-heading"><div><h2>Assistente de IA</h2><p>Pesquisa com fontes do Discord e da lore.</p></div><Bot size={22} /></div>
         {error && <Toast tone="error">{error}</Toast>}
         <form onSubmit={submit}>
+          <div className="ai-output-modes" role="group" aria-label="Tipo de resultado">
+            <button type="button" aria-pressed={outputMode === 'analysis'} onClick={() => setOutputMode('analysis')}>
+              <Search size={16} /> Analisar
+            </button>
+            <button type="button" aria-pressed={outputMode === 'announcement'} onClick={() => setOutputMode('announcement')}>
+              <FileText size={16} /> Comunicado
+            </button>
+            <button type="button" aria-pressed={outputMode === 'narration'} onClick={() => setOutputMode('narration')}>
+              <Feather size={16} /> Narracao
+            </button>
+          </div>
           <fieldset className="ai-scope">
             <legend>Locais da pesquisa</legend>
             {categories.map((category) => {
@@ -255,11 +320,14 @@ export function AiPanel({ channelTree }) {
           {['until', 'range'].includes(dateMode) && (
             <label className="field"><span>Data final</span><input type="datetime-local" value={dateTo} onChange={(event) => setDateTo(event.target.value)} /></label>
           )}
-          <label className="field"><span>Pergunta</span>
-            <textarea rows="6" value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="O que deseja encontrar ou analisar?" />
+          <label className="field"><span>{modeCopy[outputMode].field}</span>
+            <textarea rows="6" value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder={modeCopy[outputMode].placeholder} />
           </label>
           <Button disabled={busy || !prompt.trim() || !selectedTargets.length} type="submit">
-            <Search size={16} /> Consultar
+            {outputMode === 'analysis' && <Search size={16} />}
+            {outputMode === 'announcement' && <FileText size={16} />}
+            {outputMode === 'narration' && <Feather size={16} />}
+            {modeCopy[outputMode].action}
           </Button>
           {current && !terminal.has(current.status) && (
             <Button className="button--ghost" onClick={() => cancelAiQuery(current.id).then((payload) => setCurrent(payload.query))}>
@@ -275,7 +343,8 @@ export function AiPanel({ channelTree }) {
         <h3>Historico</h3>
         {queries.map((query) => (
           <button key={query.id} type="button" onClick={() => openQuery(query.id)}>
-            <span>{query.prompt}</span><small>{query.status}</small>
+            <span>{query.prompt}</span>
+            <small>{outputModeLabels[query.outputMode || 'analysis']} · {query.status}</small>
           </button>
         ))}
       </aside>

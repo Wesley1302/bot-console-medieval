@@ -400,11 +400,21 @@ test('validacao de IA cobre escopo, periodo e classificacao', () => {
   assert.throws(() => validateQueryInput({ prompt: 'teste', selectedTargets: [] }), /Selecione/);
   assert.throws(() => validateQueryInput({
     prompt: 'teste',
+    outputMode: 'invalid',
+    selectedTargets: [{ id: 'channel-1', type: 'text' }],
+  }), /Tipo de saida/);
+  assert.throws(() => validateQueryInput({
+    prompt: 'teste',
     selectedTargets: [{ id: 'channel-1', type: 'text' }],
     dateMode: 'range',
     dateFrom: '2026-07-26',
     dateTo: '2026-07-25',
   }), /data inicial/);
+  assert.equal(validateQueryInput({
+    prompt: 'Narre detalhadamente os acontecimentos.',
+    outputMode: 'narration',
+    selectedTargets: [{ id: 'channel-1', type: 'text' }],
+  }).outputMode, 'narration');
   const worker = createAiWorker({});
   assert.equal(worker.classify('Quando foi a ultima mensagem do usuario 123?'), 'factual');
   assert.equal(worker.classify('Analise o impacto nas casas e leis'), 'narrative');
@@ -421,6 +431,14 @@ test('validacao de IA cobre escopo, periodo e classificacao', () => {
   );
   assert.match(worker.buildSystemPrompt('summary'), /80 a 180 palavras/);
   assert.match(worker.buildSystemPrompt('detailed'), /700 a 1400 palavras/);
+  assert.match(
+    worker.buildSystemPrompt('standard', 'announcement'),
+    /comunicado final pronto para Discord/,
+  );
+  assert.match(
+    worker.buildSystemPrompt('detailed', 'narration'),
+    /Nao invente dialogos, mortes, resultados de batalhas/,
+  );
   assert.equal(
     worker.searchTerms('Qual o motivo de a ADM Quack ter feito isso?'),
     'motivo adm quack',
@@ -451,6 +469,26 @@ test('validacao de IA preserva secoes narrativas e remove referencias desconheci
   assert.deepEqual(result.facts[0].evidenceIds, ['evidence-1']);
   assert.deepEqual(result.limitations, ['Fonte parcial.']);
   assert.deepEqual(result.interpretations, []);
+});
+
+test('validacao de IA preserva texto final dos modos de escrita', () => {
+  const worker = createAiWorker({});
+  const result = worker.validateResult({
+    title: 'Aviso importante',
+    summary: 'Comunicado administrativo preparado.',
+    content: '# Aviso importante\n\nRevise seus envios antes de publicar.',
+    sections: [],
+    facts: [{
+      statement: 'A regra foi discutida pela administracao.',
+      evidenceIds: ['evidence-1'],
+      confidence: 'high',
+    }],
+  }, 'semantic', 'standard', ['evidence-1'], 'announcement');
+
+  assert.equal(result.outputMode, 'announcement');
+  assert.match(result.content, /^# Aviso importante/);
+  assert.equal(result.responseDepth, 'standard');
+  assert.deepEqual(result.facts[0].evidenceIds, ['evidence-1']);
 });
 
 test('chunking documental preserva sobreposicao controlada sem chunks vazios', () => {

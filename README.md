@@ -202,6 +202,15 @@ atualizam o indice; exclusoes removem fisicamente conteudo e embedding.
 O conhecimento complementar vem da pasta configurada em
 `KNOWLEDGE_SOURCE_PATH`. O upload manual de documentos nao aparece no painel.
 
+Na aba `IA`, o operador pode escolher entre:
+
+- `Analisar`: responde perguntas, resume e organiza fatos e inferencias.
+- `Comunicado`: redige um texto administrativo ou tematico em Markdown.
+- `Narracao`: transforma cenas e acontecimentos selecionados em narrativa.
+
+Comunicados e narracoes aparecem prontos para copiar, seguidos dos dados e das
+evidencias usados. O painel nao publica o texto automaticamente no Discord.
+
 Sem login, rotas protegidas retornam `401`. Com login, canais, foruns/topicos, leitura de mensagens, envio/edicao/exclusao, exportacoes e automacoes ja estao funcionais.
 
 ## Discord REST API

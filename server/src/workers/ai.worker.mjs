@@ -13,6 +13,7 @@ const responseArrays = [
   'affectedHouses', 'lawsAndTraditions', 'limitations',
 ];
 const responseDepths = new Set(['summary', 'standard', 'detailed']);
+const outputModes = new Set(['analysis', 'announcement', 'narration']);
 const outputTokenLimits = {
   summary: 4_096,
   standard: 8_192,
@@ -21,9 +22,10 @@ const outputTokenLimits = {
 
 const searchStopWords = new Set([
   'a', 'ao', 'aos', 'as', 'com', 'como', 'da', 'das', 'de', 'do', 'dos',
-  'e', 'em', 'esta', 'estao', 'fazer', 'feito', 'foi', 'foram', 'isso', 'me',
+  'comunicado', 'crie', 'detalhada', 'detalhado',
+  'e', 'em', 'escreva', 'esta', 'estao', 'fazer', 'feito', 'foi', 'foram', 'isso', 'me',
   'na', 'nas', 'no', 'nos',
-  'o', 'os', 'por', 'porque', 'qual', 'quais', 'que', 'quem', 'se', 'sem',
+  'narracao', 'narre', 'o', 'os', 'por', 'porque', 'qual', 'quais', 'que', 'quem', 'redija', 'se', 'sem',
   'ser', 'sobre', 'ter', 'teve', 'um', 'uma',
 ]);
 
@@ -81,32 +83,83 @@ function depthInstruction(depth) {
   ].join(' ');
 }
 
-function buildSystemPrompt(answerDepth) {
+function writingDepthInstruction(outputMode, depth) {
+  const label = outputMode === 'announcement' ? 'comunicado' : 'narracao';
+  if (depth === 'summary') {
+    return `Produza um ${label} conciso, com aproximadamente 120 a 250 palavras.`;
+  }
+  if (depth === 'detailed') {
+    return `Produza um ${label} desenvolvido, com aproximadamente 600 a 1400 palavras, sem repeticoes artificiais.`;
+  }
+  return `Produza um ${label} completo, com aproximadamente 250 a 650 palavras.`;
+}
+
+function modeInstruction(outputMode, answerDepth) {
+  if (outputMode === 'announcement') {
+    return [
+      'A tarefa e redigir um comunicado final pronto para Discord.',
+      'Coloque o texto completo no campo content, em Markdown, sem cercar com crases triplas.',
+      'Use titulo, paragrafos, citacoes, listas, cronograma e avisos apenas quando forem adequados ao pedido.',
+      'O tom pode ser administrativo, solene ou tematico conforme a instrucao do operador.',
+      'Preserve literalmente mencoes Discord presentes na instrucao ou nas evidencias, como <@id> e <@&id>; nunca invente IDs.',
+      'Nao inclua fatos, datas, regras ou promessas que nao estejam na instrucao ou nas evidencias.',
+      'Use summary apenas para descrever em uma frase o comunicado produzido.',
+      writingDepthInstruction(outputMode, answerDepth),
+    ].join(' ');
+  }
+  if (outputMode === 'narration') {
+    return [
+      'A tarefa e redigir uma narracao final pronta para Discord.',
+      'Coloque o texto completo no campo content, em Markdown, sem cercar com crases triplas.',
+      'Transforme as acoes registradas em uma narrativa coesa, preferencialmente em terceira pessoa, com atmosfera e consequencias proporcionais.',
+      'Mantenha a ordem dos acontecimentos e diferencie fatos confirmados, rumores e suspeitas.',
+      'Nao invente dialogos, mortes, resultados de batalhas, decisoes ou reacoes que nao estejam sustentados pela instrucao ou pelas evidencias.',
+      'Nao acrescente numero de Narrativa, mencao de cargo ou assinatura que nao tenha sido fornecida.',
+      'Use summary apenas para descrever em uma frase a narracao produzida.',
+      writingDepthInstruction(outputMode, answerDepth),
+    ].join(' ');
+  }
   return [
-    'Responda somente com JSON valido.',
-    'Use apenas as evidencias fornecidas. Separe fatos, interpretacoes, hipoteses e recomendacoes.',
-    'Nao invente personagens, casas, leis, mensagens ou links.',
-    'Todo item deve referenciar apenas IDs de evidencias existentes.',
-    'Preencha title, summary, sections e as listas facts, interpretations, hypotheses, recommendations, affectedHouses, lawsAndTraditions e limitations.',
-    'Cada section deve ter heading, body e evidenceIds. Use paragrafos curtos e legiveis no body.',
-    'Cada item das listas analiticas deve ter statement, evidenceIds e confidence high, medium ou low.',
+    'A tarefa e responder com uma analise baseada nas fontes.',
+    'O campo content deve ser uma string vazia.',
     depthInstruction(answerDepth),
   ].join(' ');
 }
 
-function validateResult(result, answerType, answerDepth, evidenceIds) {
+function buildSystemPrompt(answerDepth, requestedOutputMode = 'analysis') {
+  const outputMode = outputModes.has(requestedOutputMode) ? requestedOutputMode : 'analysis';
+  return [
+    'Responda somente com JSON valido.',
+    'Use apenas a instrucao do operador e as evidencias fornecidas. Separe fatos, interpretacoes, hipoteses e recomendacoes.',
+    'Nao invente personagens, casas, leis, mensagens ou links.',
+    'Todo item deve referenciar apenas IDs de evidencias existentes.',
+    'Preencha outputMode, title, summary, content, sections e as listas facts, interpretations, hypotheses, recommendations, affectedHouses, lawsAndTraditions e limitations.',
+    'Cada section deve ter heading, body e evidenceIds. Use paragrafos curtos e legiveis no body.',
+    'Cada item das listas analiticas deve ter statement, evidenceIds e confidence high, medium ou low.',
+    `Defina outputMode exatamente como "${outputMode}".`,
+    modeInstruction(outputMode, answerDepth),
+  ].join(' ');
+}
+
+function validateResult(
+  result, answerType, answerDepth, evidenceIds, requestedOutputMode = 'analysis',
+) {
   if (!result || typeof result !== 'object' || typeof result.summary !== 'string') {
     throw new Error('O provedor retornou uma resposta estruturada invalida.');
   }
   const known = new Set(evidenceIds);
+  const outputMode = outputModes.has(requestedOutputMode) ? requestedOutputMode : 'analysis';
+  const content = typeof result.content === 'string' ? result.content.trim() : '';
   const normalized = {
     ...result,
     answerType,
+    outputMode,
     responseDepth: responseDepths.has(answerDepth) ? answerDepth : 'standard',
     title: typeof result.title === 'string' && result.title.trim()
       ? result.title.trim()
       : 'Resposta da IA',
     summary: result.summary.trim(),
+    content: outputMode === 'analysis' ? '' : (content || result.summary.trim()),
     sections: Array.isArray(result.sections)
       ? result.sections
         .filter((section) => section && typeof section === 'object')
@@ -175,7 +228,9 @@ function extractAuthorId(prompt) {
   return String(prompt).match(/\b\d{16,22}\b/)?.[0] || null;
 }
 
-function boundedContext(prompt, answerType, answerDepth, evidence, maxCharacters) {
+function boundedContext(
+  prompt, answerType, answerDepth, outputMode, evidence, maxCharacters,
+) {
   const selected = [];
   for (const item of evidence) {
     const candidate = [...selected, {
@@ -186,13 +241,13 @@ function boundedContext(prompt, answerType, answerDepth, evidence, maxCharacters
       metadata: item.metadata,
     }];
     const serialized = JSON.stringify({
-      prompt, answerType, answerDepth, evidence: candidate,
+      prompt, answerType, answerDepth, outputMode, evidence: candidate,
     });
     if (serialized.length > maxCharacters) break;
     selected.push(candidate.at(-1));
   }
   return JSON.stringify({
-    prompt, answerType, answerDepth, evidence: selected,
+    prompt, answerType, answerDepth, outputMode, evidence: selected,
   });
 }
 
@@ -245,6 +300,7 @@ export function createAiWorker(dependencies = {}) {
 
       const queryType = classify(query.prompt);
       const answerDepth = classifyDepth(query.prompt);
+      const outputMode = outputModes.has(query.outputMode) ? query.outputMode : 'analysis';
       await deps.repository.updateProgress(
         query.id, 'searching', 55, 'Buscando evidencias', { queryType, answerDepth },
       );
@@ -313,8 +369,10 @@ export function createAiWorker(dependencies = {}) {
         await deps.repository.complete(query.id, {
           summary: 'Nao encontrei evidencias suficientes nos locais e periodo selecionados.',
           answerType: queryType,
+          outputMode,
           responseDepth: answerDepth,
           title: 'Evidencias insuficientes',
+          content: '',
           sections: [],
           facts: [], interpretations: [], hypotheses: [], recommendations: [],
           affectedHouses: [], lawsAndTraditions: [],
@@ -323,7 +381,8 @@ export function createAiWorker(dependencies = {}) {
         return true;
       }
       if (
-        queryType === 'factual'
+        outputMode === 'analysis'
+        && queryType === 'factual'
         && answerDepth !== 'detailed'
         && extractAuthorId(query.prompt)
       ) {
@@ -333,8 +392,10 @@ export function createAiWorker(dependencies = {}) {
             ? `A evidencia mais recente foi enviada em ${first.metadata.createdAt}.`
             : 'Nao encontrei evidencias suficientes nos locais e periodo selecionados.',
           answerType: 'factual',
+          outputMode,
           responseDepth: answerDepth,
           title: 'Mensagem mais recente',
+          content: '',
           sections: [],
           facts: first ? [{
             statement: `${first.metadata.authorName} enviou a mensagem mais recente em ${first.metadata.createdAt}.`,
@@ -358,9 +419,9 @@ export function createAiWorker(dependencies = {}) {
 
       await deps.repository.updateProgress(query.id, 'analyzing', 80, 'Analisando evidencias');
       const contextLimit = env.AI_MAX_CONTEXT_TOKENS * 4;
-      const system = buildSystemPrompt(answerDepth);
+      const system = buildSystemPrompt(answerDepth, outputMode);
       const request = boundedContext(
-        query.prompt, queryType, answerDepth, evidence, contextLimit,
+        query.prompt, queryType, answerDepth, outputMode, evidence, contextLimit,
       );
       const generated = await deps.generate(system, request, {
         maxOutputTokens: outputTokenLimits[answerDepth],
@@ -374,6 +435,7 @@ export function createAiWorker(dependencies = {}) {
         queryType,
         answerDepth,
         evidence.map((item) => item.id),
+        outputMode,
       );
       if (partialSync) {
         result.limitations.push(
@@ -392,6 +454,7 @@ export function createAiWorker(dependencies = {}) {
         queryId: query.id,
         queryType,
         answerDepth,
+        outputMode,
         evidenceCount: evidence.length,
         durationMs: result.durationMs,
         model: result.model,
