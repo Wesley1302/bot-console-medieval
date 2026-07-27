@@ -12,6 +12,7 @@ const responseArrays = [
   'facts', 'interpretations', 'hypotheses', 'recommendations',
   'affectedHouses', 'lawsAndTraditions', 'limitations',
 ];
+const responseDepths = new Set(['summary', 'standard', 'detailed']);
 
 const searchStopWords = new Set([
   'a', 'ao', 'aos', 'as', 'com', 'como', 'da', 'das', 'de', 'do', 'dos',
@@ -35,19 +36,98 @@ function classify(prompt) {
   return 'semantic';
 }
 
-function validateResult(result, answerType, evidenceIds) {
+function classifyDepth(prompt) {
+  const text = String(prompt || '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+  if (
+    /\b(detalhe|detalhes|detalhado|detalhada|detalhadamente|aprofunde|aprofundado|aprofundada|minucioso|minuciosa|minuciosamente|exaustivo|exaustiva)\b/.test(text)
+    || /passo a passo|mais detalhes|riqueza de detalhes|explicacao completa|analise completa/.test(text)
+  ) return 'detailed';
+  if (
+    /\b(resuma|resumo|resumidamente|sintetize|sintese|sucinto|sucinta|brevemente)\b/.test(text)
+    || /em poucas palavras|resposta curta|responda brevemente/.test(text)
+  ) return 'summary';
+  return 'standard';
+}
+
+function depthInstruction(depth) {
+  if (depth === 'summary') {
+    return [
+      'A resposta solicitada e resumida.',
+      'Escreva um summary direto com aproximadamente 80 a 180 palavras.',
+      'Use no maximo 2 sections curtas, ou nenhuma se o summary for suficiente.',
+    ].join(' ');
+  }
+  if (depth === 'detailed') {
+    return [
+      'A resposta solicitada e detalhada.',
+      'Escreva um summary executivo com aproximadamente 120 a 220 palavras.',
+      'Depois desenvolva de 5 a 8 sections claras, com aproximadamente 700 a 1400 palavras no total.',
+      'Organize contexto, acontecimentos, envolvidos, consequencias e pontos ainda incertos quando forem pertinentes.',
+      'Nao aumente o texto com repeticoes: quando faltarem evidencias, registre a limitacao.',
+    ].join(' ');
+  }
+  return [
+    'A resposta solicitada tem profundidade padrao.',
+    'Escreva um summary com aproximadamente 100 a 180 palavras.',
+    'Depois desenvolva de 2 a 4 sections objetivas, com aproximadamente 250 a 600 palavras no total.',
+  ].join(' ');
+}
+
+function buildSystemPrompt(answerDepth) {
+  return [
+    'Responda somente com JSON valido.',
+    'Use apenas as evidencias fornecidas. Separe fatos, interpretacoes, hipoteses e recomendacoes.',
+    'Nao invente personagens, casas, leis, mensagens ou links.',
+    'Todo item deve referenciar apenas IDs de evidencias existentes.',
+    'Preencha title, summary, sections e as listas facts, interpretations, hypotheses, recommendations, affectedHouses, lawsAndTraditions e limitations.',
+    'Cada section deve ter heading, body e evidenceIds. Use paragrafos curtos e legiveis no body.',
+    'Cada item das listas analiticas deve ter statement, evidenceIds e confidence high, medium ou low.',
+    depthInstruction(answerDepth),
+  ].join(' ');
+}
+
+function validateResult(result, answerType, answerDepth, evidenceIds) {
   if (!result || typeof result !== 'object' || typeof result.summary !== 'string') {
     throw new Error('O provedor retornou uma resposta estruturada invalida.');
   }
   const known = new Set(evidenceIds);
-  const normalized = { ...result, answerType };
+  const normalized = {
+    ...result,
+    answerType,
+    responseDepth: responseDepths.has(answerDepth) ? answerDepth : 'standard',
+    title: typeof result.title === 'string' && result.title.trim()
+      ? result.title.trim()
+      : 'Resposta da IA',
+    summary: result.summary.trim(),
+    sections: Array.isArray(result.sections)
+      ? result.sections
+        .filter((section) => section && typeof section === 'object')
+        .map((section) => ({
+          heading: String(section.heading || '').trim(),
+          body: String(section.body || '').trim(),
+          evidenceIds: (Array.isArray(section.evidenceIds) ? section.evidenceIds : [])
+            .filter((id) => known.has(id)),
+        }))
+        .filter((section) => section.heading && section.body)
+        .slice(0, 8)
+      : [],
+  };
   for (const field of responseArrays) normalized[field] = Array.isArray(result[field]) ? result[field] : [];
   for (const field of responseArrays.slice(0, -1)) {
-    normalized[field] = normalized[field].map((item) => ({
-      ...item,
-      evidenceIds: (item.evidenceIds || []).filter((id) => known.has(id)),
-    }));
+    normalized[field] = normalized[field]
+      .filter((item) => item && typeof item === 'object' && item.statement)
+      .map((item) => ({
+        ...item,
+        evidenceIds: (Array.isArray(item.evidenceIds) ? item.evidenceIds : [])
+          .filter((id) => known.has(id)),
+      }));
   }
+  normalized.limitations = normalized.limitations
+    .filter((item) => typeof item === 'string' && item.trim())
+    .map((item) => item.trim());
   return normalized;
 }
 
@@ -90,7 +170,7 @@ function extractAuthorId(prompt) {
   return String(prompt).match(/\b\d{16,22}\b/)?.[0] || null;
 }
 
-function boundedContext(prompt, answerType, evidence, maxCharacters) {
+function boundedContext(prompt, answerType, answerDepth, evidence, maxCharacters) {
   const selected = [];
   for (const item of evidence) {
     const candidate = [...selected, {
@@ -100,11 +180,15 @@ function boundedContext(prompt, answerType, evidence, maxCharacters) {
       url: item.messageUrl,
       metadata: item.metadata,
     }];
-    const serialized = JSON.stringify({ prompt, answerType, evidence: candidate });
+    const serialized = JSON.stringify({
+      prompt, answerType, answerDepth, evidence: candidate,
+    });
     if (serialized.length > maxCharacters) break;
     selected.push(candidate.at(-1));
   }
-  return JSON.stringify({ prompt, answerType, evidence: selected });
+  return JSON.stringify({
+    prompt, answerType, answerDepth, evidence: selected,
+  });
 }
 
 export function createAiWorker(dependencies = {}) {
@@ -155,8 +239,9 @@ export function createAiWorker(dependencies = {}) {
       await deps.repository.saveScope(query.id, deps.guildId, `Consulta ${query.id}`, areas);
 
       const queryType = classify(query.prompt);
+      const answerDepth = classifyDepth(query.prompt);
       await deps.repository.updateProgress(
-        query.id, 'searching', 55, 'Buscando evidencias', { queryType },
+        query.id, 'searching', 55, 'Buscando evidencias', { queryType, answerDepth },
       );
       const channelIds = areas.map((area) => area.id);
       let messageRows = [];
@@ -223,19 +308,29 @@ export function createAiWorker(dependencies = {}) {
         await deps.repository.complete(query.id, {
           summary: 'Nao encontrei evidencias suficientes nos locais e periodo selecionados.',
           answerType: queryType,
+          responseDepth: answerDepth,
+          title: 'Evidencias insuficientes',
+          sections: [],
           facts: [], interpretations: [], hypotheses: [], recommendations: [],
           affectedHouses: [], lawsAndTraditions: [],
           limitations: ['Nenhuma evidencia recuperada.'],
         }, resolved.inaccessibleTargets.length || partialSync ? 'partial' : 'completed');
         return true;
       }
-      if (queryType === 'factual' && extractAuthorId(query.prompt)) {
+      if (
+        queryType === 'factual'
+        && answerDepth !== 'detailed'
+        && extractAuthorId(query.prompt)
+      ) {
         const first = evidence[0];
         await deps.repository.complete(query.id, {
           summary: first
             ? `A evidencia mais recente foi enviada em ${first.metadata.createdAt}.`
             : 'Nao encontrei evidencias suficientes nos locais e periodo selecionados.',
           answerType: 'factual',
+          responseDepth: answerDepth,
+          title: 'Mensagem mais recente',
+          sections: [],
           facts: first ? [{
             statement: `${first.metadata.authorName} enviou a mensagem mais recente em ${first.metadata.createdAt}.`,
             evidenceIds: [first.id],
@@ -258,21 +353,21 @@ export function createAiWorker(dependencies = {}) {
 
       await deps.repository.updateProgress(query.id, 'analyzing', 80, 'Analisando evidencias');
       const contextLimit = env.AI_MAX_CONTEXT_TOKENS * 4;
-      const system = [
-        'Responda somente com JSON valido.',
-        'Use apenas as evidencias fornecidas. Separe fatos, interpretacoes, hipoteses e recomendacoes.',
-        'Nao invente personagens, casas, leis, mensagens ou links.',
-        'Todo item deve referenciar apenas IDs de evidencias existentes.',
-        'Preencha summary e as listas facts, interpretations, hypotheses, recommendations, affectedHouses, lawsAndTraditions e limitations.',
-        'Cada item das listas analiticas deve ter statement, evidenceIds e confidence high, medium ou low.',
-      ].join(' ');
-      const request = boundedContext(query.prompt, queryType, evidence, contextLimit);
+      const system = buildSystemPrompt(answerDepth);
+      const request = boundedContext(
+        query.prompt, queryType, answerDepth, evidence, contextLimit,
+      );
       const generated = await deps.generate(system, request);
       if (await cancelled(query.id)) {
         await deps.repository.finishCancelled(query.id);
         return true;
       }
-      const result = validateResult(generated.result, queryType, evidence.map((item) => item.id));
+      const result = validateResult(
+        generated.result,
+        queryType,
+        answerDepth,
+        evidence.map((item) => item.id),
+      );
       if (partialSync) {
         result.limitations.push(
           'A sincronizacao desta consulta foi limitada ao historico mais recente para responder mais rapido.',
@@ -289,6 +384,7 @@ export function createAiWorker(dependencies = {}) {
       logger.info('ai_query_completed', {
         queryId: query.id,
         queryType,
+        answerDepth,
         evidenceCount: evidence.length,
         durationMs: result.durationMs,
         model: result.model,
@@ -301,7 +397,9 @@ export function createAiWorker(dependencies = {}) {
     return true;
   }
 
-  return { processNext, classify, searchTerms, validateResult };
+  return {
+    processNext, classify, classifyDepth, buildSystemPrompt, searchTerms, validateResult,
+  };
 }
 
 export const aiWorker = createAiWorker();

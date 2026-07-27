@@ -409,10 +409,48 @@ test('validacao de IA cobre escopo, periodo e classificacao', () => {
   assert.equal(worker.classify('Quando foi a ultima mensagem do usuario 123?'), 'factual');
   assert.equal(worker.classify('Analise o impacto nas casas e leis'), 'narrative');
   assert.equal(worker.classify('Cenas sobre traicao'), 'semantic');
+  assert.equal(worker.classifyDepth('Resuma isso em poucas palavras'), 'summary');
+  assert.equal(worker.classifyDepth('Explique a situacao'), 'standard');
+  assert.equal(
+    worker.classifyDepth('Explique detalhadamente, com mais detalhes'),
+    'detailed',
+  );
+  assert.equal(
+    worker.classifyDepth('Nao faca um resumo; apresente uma analise completa'),
+    'detailed',
+  );
+  assert.match(worker.buildSystemPrompt('summary'), /80 a 180 palavras/);
+  assert.match(worker.buildSystemPrompt('detailed'), /700 a 1400 palavras/);
   assert.equal(
     worker.searchTerms('Qual o motivo de a ADM Quack ter feito isso?'),
     'motivo adm quack',
   );
+});
+
+test('validacao de IA preserva secoes narrativas e remove referencias desconhecidas', () => {
+  const worker = createAiWorker({});
+  const result = worker.validateResult({
+    title: 'Analise detalhada',
+    summary: 'Resumo validado.',
+    sections: [{
+      heading: 'Contexto',
+      body: 'Explicacao baseada nas mensagens.',
+      evidenceIds: ['evidence-1', 'unknown'],
+    }],
+    facts: [{
+      statement: 'Fato confirmado.',
+      evidenceIds: ['evidence-1', 'unknown'],
+      confidence: 'high',
+    }],
+    limitations: ['  Fonte parcial.  ', null],
+  }, 'narrative', 'detailed', ['evidence-1']);
+
+  assert.equal(result.responseDepth, 'detailed');
+  assert.equal(result.title, 'Analise detalhada');
+  assert.deepEqual(result.sections[0].evidenceIds, ['evidence-1']);
+  assert.deepEqual(result.facts[0].evidenceIds, ['evidence-1']);
+  assert.deepEqual(result.limitations, ['Fonte parcial.']);
+  assert.deepEqual(result.interpretations, []);
 });
 
 test('chunking documental preserva sobreposicao controlada sem chunks vazios', () => {

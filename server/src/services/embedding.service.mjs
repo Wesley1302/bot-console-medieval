@@ -19,10 +19,23 @@ const evidenceItemSchema = {
   additionalProperties: false,
 };
 
+const narrativeSectionSchema = {
+  type: 'object',
+  properties: {
+    heading: { type: 'string' },
+    body: { type: 'string' },
+    evidenceIds: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['heading', 'body', 'evidenceIds'],
+  additionalProperties: false,
+};
+
 const structuredResponseSchema = {
   type: 'object',
   properties: {
+    title: { type: 'string' },
     summary: { type: 'string' },
+    sections: { type: 'array', items: narrativeSectionSchema },
     facts: { type: 'array', items: evidenceItemSchema },
     interpretations: { type: 'array', items: evidenceItemSchema },
     hypotheses: { type: 'array', items: evidenceItemSchema },
@@ -32,7 +45,9 @@ const structuredResponseSchema = {
     limitations: { type: 'array', items: { type: 'string' } },
   },
   required: [
+    'title',
     'summary',
+    'sections',
     'facts',
     'interpretations',
     'hypotheses',
@@ -193,6 +208,7 @@ export function createGeminiClient(options = {}) {
             generationConfig: {
               responseMimeType: 'application/json',
               responseJsonSchema: structuredResponseSchema,
+              maxOutputTokens: 8_192,
             },
           });
           const content = geminiText(payload);

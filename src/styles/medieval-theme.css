@@ -1490,14 +1490,25 @@ textarea {
 
 .ai-result {
   display: grid;
-  gap: 20px;
+  gap: 28px;
   max-width: 900px;
   margin: 0 auto;
 }
 
-.ai-result header span {
+.ai-result__labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ai-result__labels span {
+  padding: 3px 7px;
+  border: 1px solid oklch(58% 0.09 70 / 38%);
+  border-radius: var(--radius-sm);
   color: var(--color-gold);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -1507,17 +1518,90 @@ textarea {
   margin: 0;
 }
 
+.ai-result__header {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-result__header h2 {
+  font-size: 1.55rem;
+  line-height: 1.2;
+}
+
+.ai-result__summary {
+  max-width: 76ch;
+  color: var(--color-text);
+  font-size: 1rem;
+  line-height: 1.75;
+  white-space: pre-line;
+}
+
 .ai-result section {
   display: grid;
   gap: 9px;
 }
 
-.ai-result section > p,
+.ai-result__narrative {
+  gap: 0 !important;
+}
+
+.ai-result__narrative article {
+  display: grid;
+  gap: 8px;
+  padding: 18px 0;
+  border-bottom: var(--border-muted);
+}
+
+.ai-result__narrative article:first-child {
+  padding-top: 0;
+}
+
+.ai-result__narrative h3 {
+  font-size: 1.05rem;
+}
+
+.ai-result__narrative p {
+  max-width: 78ch;
+  color: var(--color-text);
+  line-height: 1.75;
+  white-space: pre-line;
+}
+
+.ai-result__data {
+  gap: 20px !important;
+  padding-top: 22px;
+  border-top: var(--border-muted);
+}
+
+.ai-result__section-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.ai-result__section-heading p {
+  color: var(--color-muted);
+}
+
+.ai-result__group {
+  display: grid;
+  gap: 9px;
+}
+
+.ai-analysis-item,
 .ai-evidence article {
   padding: 12px;
   border: var(--border-muted);
   border-radius: var(--radius-md);
   background: var(--surface-panel);
+}
+
+.ai-analysis-item {
+  display: grid;
+  gap: 7px;
+}
+
+.ai-analysis-item p {
+  line-height: 1.55;
 }
 
 .ai-result small {
@@ -1615,6 +1699,19 @@ textarea {
 
   .ai-progress {
     min-height: 260px;
+  }
+
+  .ai-result {
+    gap: 22px;
+  }
+
+  .ai-result__summary,
+  .ai-result__narrative p {
+    line-height: 1.65;
+  }
+
+  .ai-result__header h2 {
+    font-size: 1.35rem;
   }
 }
 

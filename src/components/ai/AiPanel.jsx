@@ -10,6 +10,22 @@ import { EmptyState } from '../ui/EmptyState.jsx';
 import { Toast } from '../ui/Toast.jsx';
 
 const terminal = new Set(['completed', 'partial', 'failed', 'cancelled']);
+const answerTypeLabels = {
+  factual: 'Consulta factual',
+  narrative: 'Analise narrativa',
+  semantic: 'Pesquisa semantica',
+};
+const depthLabels = {
+  summary: 'Resposta resumida',
+  standard: 'Resposta completa',
+  detailed: 'Resposta detalhada',
+};
+const confidenceLabels = {
+  high: 'Alta confianca',
+  medium: 'Media confianca',
+  low: 'Baixa confianca',
+};
+
 function ScopeCheckbox({ area, checked, partial = false, onToggle }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -38,21 +54,66 @@ function ResultPanel({ query }) {
   }
   if (query.status === 'failed') return <Toast tone="error">{query.error || 'A consulta falhou.'}</Toast>;
   if (!result) return <EmptyState title="Consulta sem resposta" description="Nao ha resultado disponivel." />;
+  const analysisGroups = [
+    ['Fatos', result.facts],
+    ['Interpretacoes', result.interpretations],
+    ['Hipoteses', result.hypotheses],
+    ['Recomendacoes', result.recommendations],
+    ['Casas afetadas', result.affectedHouses],
+    ['Leis e tradicoes', result.lawsAndTraditions],
+  ].filter(([, items]) => Boolean(items?.length));
+  const hasAnalysisData = analysisGroups.length > 0 || result.limitations?.length > 0;
   return (
     <div className="ai-result">
-      <header><span>{result.answerType}</span><h2>{result.summary}</h2></header>
-      {[
-        ['Fatos', result.facts],
-        ['Interpretacoes', result.interpretations],
-        ['Hipoteses', result.hypotheses],
-        ['Recomendacoes', result.recommendations],
-      ].map(([title, items]) => Boolean(items?.length) && (
-        <section key={title}><h3>{title}</h3>
-          {items.map((item, index) => (
-            <p key={`${title}-${index}`}>{item.statement} {item.confidence && <small>{item.confidence}</small>}</p>
+      <header className="ai-result__header">
+        <div className="ai-result__labels">
+          <span>{answerTypeLabels[result.answerType] || result.answerType || 'Analise'}</span>
+          <span>{depthLabels[result.responseDepth] || 'Resposta completa'}</span>
+        </div>
+        <h2>{result.title || 'Resposta da IA'}</h2>
+        <p className="ai-result__summary">{result.summary}</p>
+      </header>
+      {result.sections?.length > 0 && (
+        <section className="ai-result__narrative" aria-label="Explicacao">
+          {result.sections.map((section, index) => (
+            <article key={`${section.heading}-${index}`}>
+              <h3>{section.heading}</h3>
+              <p>{section.body}</p>
+            </article>
           ))}
         </section>
-      ))}
+      )}
+      {hasAnalysisData && (
+        <section className="ai-result__data" aria-label="Dados da analise">
+          <div className="ai-result__section-heading">
+            <h2>Dados da analise</h2>
+            <p>Fatos e inferencias extraidos das fontes selecionadas.</p>
+          </div>
+          {analysisGroups.map(([title, items]) => (
+            <div className="ai-result__group" key={title}>
+              <h3>{title}</h3>
+              {items.map((item, index) => (
+                <article className="ai-analysis-item" key={`${title}-${index}`}>
+                  <p>{item.statement}</p>
+                  {item.confidence && (
+                    <small>{confidenceLabels[item.confidence] || item.confidence}</small>
+                  )}
+                </article>
+              ))}
+            </div>
+          ))}
+          {result.limitations?.length > 0 && (
+            <div className="ai-result__group">
+              <h3>Limitacoes</h3>
+              {result.limitations.map((limitation, index) => (
+                <article className="ai-analysis-item" key={`limitation-${index}`}>
+                  <p>{limitation}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
       <section className="ai-evidence"><h3>Evidencias</h3>
         {(query.evidence || []).map((item) => (
           <article key={item.id}>

@@ -56,10 +56,17 @@ test('Gemini solicita resposta no contrato estruturado do worker', async () => {
 
   const schema = requestBody.generationConfig.responseJsonSchema;
   assert.equal(requestBody.generationConfig.responseMimeType, 'application/json');
+  assert.equal(requestBody.generationConfig.maxOutputTokens, 8_192);
   assert.equal(schema.type, 'object');
+  assert.ok(schema.required.includes('title'));
   assert.ok(schema.required.includes('summary'));
+  assert.ok(schema.required.includes('sections'));
   assert.ok(schema.required.includes('limitations'));
   assert.deepEqual(schema.properties.facts.items.required, ['statement', 'evidenceIds']);
+  assert.deepEqual(
+    schema.properties.sections.items.required,
+    ['heading', 'body', 'evidenceIds'],
+  );
 });
 
 test('Gemini configura e valida a dimensao dos embeddings em lote', async () => {
